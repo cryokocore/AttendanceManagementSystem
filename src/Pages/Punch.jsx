@@ -72,33 +72,33 @@ export default function Punch({ user, employeeId, employeeLocation }) {
           `https://script.google.com/macros/s/AKfycbxrHkM0tFFFpE5zyZGF45hKVh6TCd-q05bC-4HsSiMuXGoy0PVirQXS1vLxyMXnhg06/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
-        console.log("Holidays:", data);
+        // console.log("Holidays:", data);
         if (data.success) {
           setHolidays(data.holidays);
         }
       } catch (error) {
-        console.error("Error fetching holidays:", error);
+        // console.error("Error fetching holidays:", error);
       }
     };
 
     fetchHolidays();
   }, []);
-  console.log("employeeLocation", employeeLocation);
+  // console.log("employeeLocation", employeeLocation);
 
   useEffect(() => {
     const timer = setInterval(() => {
       let current = dayjs();
 
       // Log the current time first
-      console.log("Before Timezone Adjustment:", current.format("HH:mm:ss"));
+      // console.log("Before Timezone Adjustment:", current.format("HH:mm:ss"));
 
       // Check the employee's location and set the correct timezone
       if (employeeLocation === "UAE") {
         current = current.tz("Asia/Dubai"); // Set UAE time
-        console.log("UAE Time:", current.format("HH:mm:ss")); // Log the UAE time
+        // console.log("UAE Time:", current.format("HH:mm:ss")); // Log the UAE time
       } else if (employeeLocation === "India") {
         current = current.tz("Asia/Kolkata"); // Set India time
-        console.log("India Time:", current.format("HH:mm:ss")); // Log the India time
+        // console.log("India Time:", current.format("HH:mm:ss")); // Log the India time
       }
 
       setCurrentTime(current.format("HH:mm:ss"));
@@ -347,7 +347,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
       );
 
       const data = await res.json();
-      console.log(data);
+      // console.log(data);
 
       if (data.success) {
         const cleaned = data.data.map((item, index) => {
@@ -421,7 +421,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
         message.error("Failed to fetch attendance data");
       }
     } catch (err) {
-      console.error(err);
+      // console.error(err);
       message.error("Error fetching data");
     }
   };

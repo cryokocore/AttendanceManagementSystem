@@ -56,7 +56,7 @@ const AuthForm = ({ setUser }) => {
 
       const text = await response.text();
       const result = JSON.parse(text);
-      console.log("Result:",result);
+      // console.log("Result:",result);
 
       if (result.success) {
         message.success(
