@@ -36,3 +36,28 @@
     transform: rotate(360deg);
   }
 }
+.hover-card {
+  transition: all 0.3s ease;
+}
+.hover-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.hover-status{
+  transition: all 0.3s ease;
+  background-color: #91caff3d;
+}
+.hover-status:hover{
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.15);
+  color: rgb(0 0 0 / 9%) !important;
+  transform: translateY(-1px);
+  background-color: #91caff3d;
+}
+
+.hover-logout{
+  transition: all 0.3s ease;
+}
+.hover-logout:hover{
+  transform: translateY(-1px);
+}
