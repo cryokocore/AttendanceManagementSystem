@@ -636,7 +636,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
                   type="primary"
                   size="large"
                   onClick={() => handlePunch("Punch In")}
-                  // disabled={!isNearby}
+                  disabled={!isNearby}
                 >
                   <FontAwesomeIcon icon={faCalendar} /> Punch In
                 </Button>
@@ -645,7 +645,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
                   variant="solid"
                   size="large"
                   onClick={() => handlePunch("Punch Out")}
-                  // disabled={!isNearby}
+                  disabled={!isNearby}
                 >
                   <FontAwesomeIcon icon={faArrowRightFromBracket} /> Punch Out
                 </Button>
