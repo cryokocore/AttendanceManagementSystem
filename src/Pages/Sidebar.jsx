@@ -244,7 +244,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
   const handleDrawerMenuClick = (e) => {
     setCurrent(e.key);
     navigate(e.key === "dashboard" ? "/dashboard" : `/${e.key}`);
-    if (isMobile) setCollapsed(true); 
+    if (isMobile) setCollapsed(true);
     setDrawerVisible(false);
   };
 
@@ -298,11 +298,11 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
   const styl = `.ant-drawer .ant-drawer-header {
     display: none;
 
-}`
+}`;
 
   return (
     <>
-    <style>{styl}</style>
+      <style>{styl}</style>
       {isMobile && !drawerVisible && (
         <div
           style={{
@@ -350,7 +350,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
             >
               <div
                 style={{
-                  padding: "24px",
+                  padding: "5px",
                   background: "linear-gradient(135deg, #E6F4FF, #8abee5)",
                   textAlign: "center",
                   color: "#fff",
@@ -367,7 +367,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
                 <span>Management System</span>
                 <div
                   style={{
-                    marginTop: 20,
+                    marginTop: 5,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -375,7 +375,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
                   }}
                 >
                   <Avatar
-                    size={64}
+                    size={50}
                     style={{
                       backgroundColor: "#662D91",
                       fontSize: "22px",
