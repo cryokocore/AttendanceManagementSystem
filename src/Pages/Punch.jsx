@@ -15,6 +15,7 @@ import {
 import { getDistance } from "geolib";
 import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import * as XLSX from "xlsx-js-style";
 
 import {
   faCalendar,
@@ -34,8 +35,11 @@ import utc from "dayjs/plugin/utc";
 import { width } from "@fortawesome/free-brands-svg-icons/fa42Group";
 import { render } from "@testing-library/react";
 import { text } from "@fortawesome/fontawesome-svg-core";
-import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
-import * as XLSX from "xlsx";
+import {
+  SearchOutlined,
+  ReloadOutlined,
+  ArrowDownOutlined,
+} from "@ant-design/icons";
 import { saveAs } from "file-saver";
 
 dayjs.extend(timezone);
@@ -46,7 +50,13 @@ const OFFICE_LAT = 11.024337591862132;
 const OFFICE_LNG = 76.93617472853956;
 const MAX_DISTANCE_KM = 0.5;
 
-export default function Punch({ user, employeeId, employeeLocation }) {
+export default function Punch({
+  user,
+  employeeId,
+  employeeLocation,
+  employeeName,
+  employeeDesignation,
+}) {
   const [isNearby, setIsNearby] = useState(false);
   const [location, setLocation] = useState(null);
   const [currentTime, setCurrentTime] = useState(dayjs().format("HH:mm:ss"));
@@ -62,7 +72,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [disableButton, setdisableButton] = useState(false);
 
-
+  console.log(employeeId, employeeLocation, user);
   const handleSearch = (e) => {
     setSearchText(e.target.value.toLowerCase());
   };
@@ -201,9 +211,11 @@ export default function Punch({ user, employeeId, employeeLocation }) {
   const exportToExcel = () => {
     const exportData = data
       .filter((item) => {
-        const normalize = (str) => (str || "").toLowerCase().replace(/\s+/g, "");
+        const normalize = (str) =>
+          (str || "").toLowerCase().replace(/\s+/g, "");
         const searchString = normalize(searchText);
-  
+        console.log(item);
+
         return (
           normalize(
             dayjs(item.punchIn).isValid()
@@ -223,22 +235,22 @@ export default function Punch({ user, employeeId, employeeLocation }) {
         );
       })
       .map((item) => ({
-        "Employee ID": item.employeeId,
-        "Employee Name": item.employeeName,
-        "Designation": item.designation,
-        "Location": item.location,
+        "Employee ID": employeeId,
+        "Employee Name": employeeName,
+        Designation: employeeDesignation,
+        Location: employeeLocation,
         "Punch In": item.punchIn,
         "Punch Out": item.punchOut,
         "Total Hours": item.total,
         "Punch In Remark": item.punchedInRemark,
         "Punch Out Remark": item.punchedOutRemark,
-        "Status": item.status,
+        Status: item.status,
       }));
-  
+
     const worksheet = XLSX.utils.json_to_sheet(exportData);
-  
+
     // Style the headers
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C }); // First row
       if (!worksheet[cellAddress]) continue;
@@ -255,40 +267,44 @@ export default function Punch({ user, employeeId, employeeLocation }) {
         alignment: {
           horizontal: "center",
           vertical: "center",
+          wrapText: true,
         },
         border: {
           top: { style: "thin", color: { rgb: "000000" } },
           bottom: { style: "thin", color: { rgb: "000000" } },
           left: { style: "thin", color: { rgb: "000000" } },
           right: { style: "thin", color: { rgb: "000000" } },
-        }
+        },
       };
     }
-  
+
     // Set column widths to improve spacing
-    worksheet['!cols'] = [
-      { wch: 15 }, // Employee ID
+    worksheet["!cols"] = [
+      { wch: 20 }, // Employee ID
       { wch: 20 }, // Employee Name
-      { wch: 20 }, // Designation
+      { wch: 25 }, // Designation
       { wch: 25 }, // Location
-      { wch: 20 }, // Punch In
-      { wch: 20 }, // Punch Out
+      { wch: 25 }, // Punch In
+      { wch: 25 }, // Punch Out
       { wch: 15 }, // Total Hours
-      { wch: 20 }, // Punch In Remark
-      { wch: 20 }, // Punch Out Remark
+      { wch: 40 }, // Punch In Remark
+      { wch: 40 }, // Punch Out Remark
       { wch: 20 }, // Status
     ];
-  
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
-  
+
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
     });
-  
-    const dataBlob = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(dataBlob, "Attendance_History.xlsx");
+
+    const dataBlob = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+    saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance Report.xlsx`);
+    console.log(exportData);
   };
 
   const handlePunch = (type) => {
@@ -343,9 +359,10 @@ export default function Punch({ user, employeeId, employeeLocation }) {
       })
       .catch(() => {
         message.error("Failed to record punch.");
-      }).finally(()=>{
-        setdisableButton(false);
       })
+      .finally(() => {
+        setdisableButton(false);
+      });
   };
 
   const fetchAttendance = async () => {
@@ -769,26 +786,27 @@ export default function Punch({ user, employeeId, employeeLocation }) {
               </div>
 
               {/* Refresh Button */}
-              <div className="col-12 col-lg-6 text-lg-end">
-                <Button
-                  type="primary"
-                  size="large"
-                  loading={refreshing}
-                  icon={<ReloadOutlined />}
-                  className="gradient-btn d-flex align-items-center ms-lg-auto"
-                  onClick={handleRefresh}
-                >
-                  {refreshing ? "Refreshing..." : "Refresh"}
-                </Button>
-                {/* <Button
-                  type="primary"
-                  size="large"
-                  icon={<FontAwesomeIcon  />}
-                  onClick={exportToExcel}
-                  className="d-flex align-items-center"
-                >
-                  Export
-                </Button> */}
+              <div className="col-12 col-lg-6">
+                <div className="d-flex justify-content-lg-end gap-2">
+                  <Button
+                    type="primary"
+                    size="large"
+                    loading={refreshing}
+                    icon={<ReloadOutlined />}
+                    onClick={handleRefresh}
+                  >
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </Button>
+                  <Button
+                    variant="solid"
+                    color="danger"
+                    size="large"
+                    icon={<ArrowDownOutlined />}
+                    onClick={exportToExcel}
+                  >
+                    Export
+                  </Button>
+                </div>
               </div>
             </div>
             <Table

@@ -69,7 +69,7 @@ function App() {
                 <Routes>
                   <Route
                     path="punchin/out"
-                    element={<Punch user={user} employeeId={user.employeeId} employeeLocation={user.location} />}
+                    element={<Punch user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
                   />
                   {/* Add more protected routes here */}
                 </Routes>
