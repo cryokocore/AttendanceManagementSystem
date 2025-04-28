@@ -35,6 +35,8 @@ import { useState } from "react";
 import AuthForm from "./Pages/Login.jsx";
 import Punch from "./Pages/Punch.jsx";
 import Sidebar from "./Pages/Sidebar.jsx";
+import Leave from "./Pages/Leave.jsx";
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -71,7 +73,10 @@ function App() {
                     path="punchin/out"
                     element={<Punch user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
                   />
-                  {/* Add more protected routes here */}
+                    <Route
+                    path="leave"
+                    element={<Leave user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
+                  />
                 </Routes>
               </div>
             }

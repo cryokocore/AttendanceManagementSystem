@@ -29,7 +29,8 @@ const AuthForm = ({ setUser }) => {
 
   const handleSubmit = async (values) => {
     setLoading(true);
-    const { employeeId, username, password, designation, mailid, location } = values;
+    const { employeeId, username, password, designation, mailid, location } =
+      values;
 
     const payload = isSignUp
       ? {
@@ -39,40 +40,42 @@ const AuthForm = ({ setUser }) => {
           password,
           designation,
           mailid,
-          location
+          location,
         }
       : { action: "login", employeeId, password };
 
     const formBody = new URLSearchParams(payload).toString();
 
     try {
-      const response = await fetch("https://script.google.com/macros/s/AKfycbxrHkM0tFFFpE5zyZGF45hKVh6TCd-q05bC-4HsSiMuXGoy0PVirQXS1vLxyMXnhg06/exec", {
-        method: "POST",
-        headers: {
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbzCIfCGRyBgRA1qADr38Xk2biMxT0hU8kKUuWKVwUbftf3tUOQtbNeY08lDQ0iqCd5x/exec",
+        {
+          method: "POST",
+          headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
-        body: formBody,
-      });
+          body: formBody,
+        }
+      );
 
       const text = await response.text();
       const result = JSON.parse(text);
-      // console.log("Result:",result);
 
       if (result.success) {
         message.success(
           isSignUp ? "Registered successfully" : `Welcome ${result.username}`
         );
 
-        if (isSignUp) { 
+        if (isSignUp) {
           setIsSignUp(false);
-          form.resetFields(); 
+          form.resetFields();
         } else {
           setUser({
             username: result.username,
             employeeId: result.employeeId,
             designation: result.designation,
             mailid: result.mailid,
-            location: result.location
+            location: result.location,
           });
           form.resetFields();
           navigate("/punchin/out");
@@ -84,6 +87,36 @@ const AuthForm = ({ setUser }) => {
       message.error("Unexpected response from server");
     }
     setLoading(false);
+  };
+
+  const fetchLeaveBalanceInitialization = async (employeeId) => {
+    const payload = {
+      action: "initializeLeaveBalance",
+      employeeId: employeeId,
+    };
+
+    const formBody = new URLSearchParams(payload).toString();
+
+    try {
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbzCIfCGRyBgRA1qADr38Xk2biMxT0hU8kKUuWKVwUbftf3tUOQtbNeY08lDQ0iqCd5x/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formBody,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        message.error("Error initializing leave balance");
+      }
+    } catch (error) {
+      message.error("Error during leave balance initialization");
+    }
   };
 
   return (
