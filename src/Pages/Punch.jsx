@@ -60,6 +60,8 @@ export default function Punch({ user, employeeId, employeeLocation }) {
   const [holidays, setHolidays] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [disableButton, setdisableButton] = useState(false);
+
 
   const handleSearch = (e) => {
     setSearchText(e.target.value.toLowerCase());
@@ -290,7 +292,11 @@ export default function Punch({ user, employeeId, employeeLocation }) {
   };
 
   const handlePunch = (type) => {
-    if (!location || !user) return;
+    setdisableButton(true);
+    if (!location || !user) {
+      setdisableButton(false);
+      return;
+    }
 
     // Adjust time based on the employee's location
     let now = dayjs();
@@ -337,7 +343,9 @@ export default function Punch({ user, employeeId, employeeLocation }) {
       })
       .catch(() => {
         message.error("Failed to record punch.");
-      });
+      }).finally(()=>{
+        setdisableButton(false);
+      })
   };
 
   const fetchAttendance = async () => {
@@ -636,7 +644,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
                   type="primary"
                   size="large"
                   onClick={() => handlePunch("Punch In")}
-                  disabled={!isNearby}
+                  disabled={!isNearby || disableButton}
                 >
                   <FontAwesomeIcon icon={faCalendar} /> Punch In
                 </Button>
@@ -645,7 +653,7 @@ export default function Punch({ user, employeeId, employeeLocation }) {
                   variant="solid"
                   size="large"
                   onClick={() => handlePunch("Punch Out")}
-                  disabled={!isNearby}
+                  disabled={!isNearby || disableButton}
                 >
                   <FontAwesomeIcon icon={faArrowRightFromBracket} /> Punch Out
                 </Button>
