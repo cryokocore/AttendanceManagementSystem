@@ -48,7 +48,7 @@ const AuthForm = ({ setUser }) => {
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbzCIfCGRyBgRA1qADr38Xk2biMxT0hU8kKUuWKVwUbftf3tUOQtbNeY08lDQ0iqCd5x/exec",
+        "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
         {
           method: "POST",
           headers: {
@@ -99,7 +99,7 @@ const AuthForm = ({ setUser }) => {
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbzCIfCGRyBgRA1qADr38Xk2biMxT0hU8kKUuWKVwUbftf3tUOQtbNeY08lDQ0iqCd5x/exec",
+        "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
         {
           method: "POST",
           headers: {
