@@ -20,7 +20,9 @@ import { Select } from "antd";
 import { useNavigate } from "react-router-dom";
 
 const { Option } = Select;
-
+message.config({
+  maxCount: 2, 
+});
 const AuthForm = ({ setUser }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ const AuthForm = ({ setUser }) => {
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
+        "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
         {
           method: "POST",
           headers: {
@@ -99,7 +101,7 @@ const AuthForm = ({ setUser }) => {
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
+        "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
         {
           method: "POST",
           headers: {

@@ -41,7 +41,9 @@ import {
   ArrowDownOutlined,
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
-
+message.config({
+  maxCount: 2,
+});
 dayjs.extend(timezone);
 dayjs.extend(utc);
 
@@ -81,7 +83,7 @@ export default function Punch({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -219,12 +221,12 @@ export default function Punch({
         return (
           normalize(
             dayjs(item.punchIn).isValid()
-              ? dayjs(item.punchIn).format("MMMM D, YYYY - HH:mm")
+              ? dayjs(item.punchIn).format("MMMM D, YYYY - HH:mm:ss")
               : ""
           ).includes(searchString) ||
           normalize(
             dayjs(item.punchOut).isValid()
-              ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm")
+              ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm:ss")
               : ""
           ).includes(searchString) ||
           normalize(item.location).includes(searchString) ||
@@ -239,8 +241,12 @@ export default function Punch({
         "Employee Name": employeeName,
         Designation: employeeDesignation,
         Location: employeeLocation,
-        "Punch In": item.punchIn,
-        "Punch Out": item.punchOut,
+        "Punch In": dayjs(item.punchIn).isValid()
+          ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
+          : "-",
+        "Punch Out": dayjs(item.punchOut).isValid()
+          ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
+          : "-",
         "Total Hours": item.total,
         "Punch In Remark": item.punchedInRemark,
         "Punch Out Remark": item.punchedOutRemark,
@@ -251,31 +257,35 @@ export default function Punch({
 
     // Style the headers
     const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C }); // First row
-      if (!worksheet[cellAddress]) continue;
-      worksheet[cellAddress].s = {
-        fill: {
-          fgColor: { rgb: "FFFF00" }, // Yellow background
-        },
-        font: {
-          name: "Arial",
-          sz: 14,
-          bold: true,
-          color: { rgb: "000000" }, // Black font
-        },
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true,
-        },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } },
-        },
-      };
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font: {
+            name: "Arial",
+            sz: R === 0 ? 14 : 10, // Larger for header
+            bold: R === 0 ? true : false,
+            color: { rgb: "000000" },
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+          fill:
+            R === 0
+              ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
+              : undefined,
+        };
+      }
     }
 
     // Set column widths to improve spacing
@@ -341,7 +351,7 @@ export default function Punch({
 
     // Send the data to the server via POST request
     fetch(
-      "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
+      "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
       {
         method: "POST",
         headers: {
@@ -368,7 +378,7 @@ export default function Punch({
   const fetchAttendance = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec?employeeId=${employeeId}&action=attendance`
+        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?employeeId=${employeeId}&action=attendance`
       );
 
       const data = await res.json();

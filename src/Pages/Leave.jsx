@@ -16,6 +16,7 @@ import {
   DatePicker,
   Statistic,
   TimePicker,
+  Tag,
 } from "antd";
 import { getDistance } from "geolib";
 import dayjs from "dayjs";
@@ -54,14 +55,18 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  MinusCircleOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 dayjs.extend(isSameOrBefore);
-
 dayjs.extend(timezone);
 dayjs.extend(utc);
-
+message.config({
+  maxCount: 2,
+});
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
@@ -88,6 +93,8 @@ export default function Leave({
   const [disableButton, setdisableButton] = useState(false);
   const [form] = Form.useForm();
   const [formLayout, setFormLayout] = useState("vertical");
+  const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
   const [leaveDuration, setLeaveDuration] = useState(null);
   const [leaveBalances, setLeaveBalances] = useState({
     totalAvailable: 0,
@@ -99,11 +106,17 @@ export default function Leave({
     earnedTaken: 0,
     compoffTaken: 0,
   });
+  const [tableRefresh, setTableRefresh] = useState(false);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+
+  const handleSearch = (e) => {
+    setSearchText(e.target.value.toLowerCase());
+  };
 
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -116,9 +129,163 @@ export default function Leave({
       console.error("Fetch error:", err);
     }
   };
+
+  const fetchLeaveRequests = async () => {
+    try {
+      const response = await fetch(
+        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=leaveRequests&employeeId=${employeeId}`
+      );
+      const data = await response.json();
+      console.log("Leave request:", data);
+
+      if (data.success && Array.isArray(data.data)) {
+        setLeaveRequests(data.data);
+      } else {
+        console.error(
+          "Failed to get leave requests:",
+          data.error || "Unknown error"
+        );
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
+  };
+
   useEffect(() => {
     fetchLeaveBalance();
+    fetchLeaveRequests();
   }, [employeeId]); // Re-run whenever employeeId changes
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchLeaveBalance();
+    setRefreshing(false);
+  };
+
+  const handleTableRefresh = async () => {
+    setTableRefresh(true);
+    await fetchLeaveRequests();
+    setTableRefresh(false);
+  };
+
+  const exportToExcel = () => {
+    const searchString = normalize(searchText);
+  
+    const filteredData = searchString
+      ? leaveRequests.filter((item) => {
+          const fromDate = item.dateRange?.split(",")[0]?.trim() || "";
+          const toDate = item.dateRange?.split(",")[1]?.trim() || "";
+          const valuesToSearch = [
+            item.leaveType,
+            item.reason,
+            item.leaveDuration, // Not `duration`
+            item.status,
+            fromDate,
+            toDate,
+          ];
+          return valuesToSearch.some((value) =>
+            normalize(value).includes(searchString)
+          );
+        })
+      : leaveRequests;
+  
+    console.log("Raw leaveRequests:", leaveRequests);
+    console.log("Filtered export data:", filteredData);
+  
+    if (!filteredData.length) {
+      console.warn("No data to export.");
+      return;
+    }
+  
+    const exportData = filteredData.map((item) => {
+      const [fromRaw, toRaw] = (item.dateRange || "").split(",");
+      const fromDate = dayjs(fromRaw).isValid()
+        ? dayjs(fromRaw).format("MMM D, YYYY HH:mm:ss")
+        : "-";
+      const toDate = dayjs(toRaw).isValid()
+        ? dayjs(toRaw).format("MMM D, YYYY HH:mm:ss")
+        : "-";
+  
+      return {
+        "Employee ID": employeeId || "-",
+        "Employee Name": employeeName || "-",
+        Designation: employeeDesignation || "-",
+        Location: employeeLocation || "-",
+        "Leave Type": item.leaveType || "-",
+        "From Date": fromDate,
+        "To Date": toDate,
+        Reason: item.reason || "-",
+        "Leave Duration": item.leaveDuration || "-",
+        Status: item.status || "-",
+      };
+    });
+  
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    
+        // Style the headers
+        const range = XLSX.utils.decode_range(worksheet["!ref"]);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!worksheet[cellAddress]) continue;
+    
+            worksheet[cellAddress].s = {
+              font: {
+                name: "Arial",
+                sz: R === 0 ? 14 : 10, // Larger for header
+                bold: R === 0 ? true : false,
+                color: { rgb: "000000" },
+              },
+              alignment: {
+                horizontal: "center",
+                vertical: "center",
+                wrapText: true,
+              },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } },
+              },
+              fill:
+                R === 0
+                  ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
+                  : undefined,
+            };
+          }
+        }
+    
+        worksheet["!cols"] = [
+          { wch: 20 }, // Employee ID
+          { wch: 25 }, // Employee Name
+          { wch: 25 }, // Designation
+          { wch: 20 }, // Location
+          { wch: 20 }, // Leave Type
+          { wch: 25 }, // From Date
+          { wch: 25 }, // To Date
+          { wch: 100 }, // Reason
+          { wch: 20 }, // Leave Duration
+          { wch: 20 }, // Status
+        ];
+    
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leave Report");
+  
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+  
+    const blob = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+  
+    saveAs(blob, `${employeeId}_${employeeName}_Leave_Report.xlsx`);
+  };
+  
+  
+  
 
   const leaveStats = [
     {
@@ -133,7 +300,10 @@ export default function Leave({
       title: "Total Leave Taken",
       value: leaveBalances.totalTaken || 0,
       icon: (
-        <FontAwesomeIcon icon={faCalendarXmark} style={{ color: "#faad14" }} />
+        <FontAwesomeIcon
+          icon={faCalendarXmark}
+          style={{ color: "#fe00008f" }}
+        />
       ),
       color: "#fe00008f",
     },
@@ -185,7 +355,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -257,7 +427,181 @@ export default function Leave({
     return totalLeave;
   };
 
+  const normalize = (text) => String(text).toLowerCase().replace(/\s+/g, "");
+  const filteredData = leaveRequests.filter((item) => {
+    const fromDate = item.dateRange?.split(",")[0]?.trim() || "";
+    const toDate = item.dateRange?.split(",")[1]?.trim() || "";
+
+    const valuesToSearch = [
+      item.leaveType,
+      item.reason,
+      item.duration,
+      item.status,
+      fromDate,
+      toDate,
+    ];
+
+    return valuesToSearch.some((value) =>
+      normalize(value).includes(normalize(searchText))
+    );
+  });
+
+  const columns = [
+    // {
+    //   title: "Leave Submitted Date",
+    //   dataIndex: "timestamp",
+    //   width: 200,
+    //   ellipsis: true,
+    //   render: (text) => {
+    //     const formattedText = dayjs(text).isValid()
+    //       ? dayjs(text).format("MMMM D, YYYY - HH:mm:ss")
+    //       : "-";
+    //     return (
+    //       <Tooltip title={formattedText}>
+    //         <span>{formattedText}</span>
+    //       </Tooltip>
+    //     );
+    //   },
+    // },
+
+    {
+      title: "Leave Type",
+      dataIndex: "leaveType",
+      width: 150,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip title={text}>
+          <span>{text}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "From Date",
+      dataIndex: "dateRange",
+      width: 200,
+      ellipsis: true,
+      render: (text) => {
+        const fromDate = text?.split(",")[0]?.trim();
+        const formatted = dayjs(fromDate).isValid()
+          ? dayjs(fromDate).format("MMM D, YYYY HH:mm")
+          : "-";
+        return (
+          <Tooltip title={formatted}>
+            <span>{formatted}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "To Date",
+      dataIndex: "dateRange",
+      width: 200,
+      ellipsis: true,
+      render: (text) => {
+        const toDate = text?.split(",")[1]?.trim();
+        const formatted = dayjs(toDate).isValid()
+          ? dayjs(toDate).format("MMM D, YYYY HH:mm")
+          : "-";
+        return (
+          <Tooltip title={formatted}>
+            <span>{formatted}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Reason",
+      dataIndex: "reason",
+      width: 300,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip
+          title={
+            <div
+              style={{
+                maxWidth: 300,
+                whiteSpace: "normal",
+                wordBreak: "break-word", // handles long unbroken strings
+              }}
+            >
+              {text}
+            </div>
+          }
+        >
+          <span
+            style={{
+              display: "inline-block",
+              width: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              verticalAlign: "middle",
+            }}
+          >
+            {text}
+          </span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Leave Duration",
+      dataIndex: "leaveDuration",
+      width: 130,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip title={text}>
+          <span>{text}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      width: 150,
+      ellipsis: true,
+      render: (text) => {
+        let color = "default";
+        let icon = null;
+
+        const status = text?.toLowerCase();
+
+        if (status === "pending") {
+          color = "warning";
+          icon = <SyncOutlined spin />;
+        } else if (status === "approved") {
+          color = "success";
+          icon = <CheckCircleOutlined />;
+        } else if (status === "denied") {
+          color = "error";
+          icon = <CloseCircleOutlined />;
+        }
+
+        return (
+          <Tooltip title={text}>
+            <Tag
+              color={color}
+              icon={icon}
+              style={{
+                textTransform: "capitalize",
+                fontSize: "16px",
+                padding: "4px 12px",
+                height: "auto",
+              }}
+            >
+              {text}
+            </Tag>
+          </Tooltip>
+        );
+      },
+    },
+  ];
+
   const handleSubmitLeave = async () => {
+    if (leaveDuration === 0) {
+      message.warning("Please select a valid date range");
+      return;
+    }
+    setLoading(true);
     try {
       const values = await form.validateFields(); // Get form values
       const dateRange = values["Date Range"];
@@ -290,7 +634,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbx1Xh73i6EdM0D2GaE6xCHL2irnPXpRpLbZiL2u8_vTM6oxzu_t7SxoAmUp6ilBQQVw/exec",
+        "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
         {
           method: "POST",
           headers: {
@@ -304,6 +648,7 @@ export default function Leave({
 
       if (result.success) {
         message.success("Leave request submitted successfully!");
+        setLeaveDuration(0);
         form.resetFields();
         await fetchLeaveBalance();
       } else {
@@ -312,6 +657,8 @@ export default function Leave({
     } catch (error) {
       console.error(error);
       message.error("Please fill all fields correctly!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -332,54 +679,65 @@ export default function Leave({
         Manage your leave requests and balances
       </p>
       <div className="row mt-3 mt-lg-5">
-      <h3>
-              <FontAwesomeIcon icon={faCalendar} />
-              <span className="ms-1">Leave Summary</span>
-            </h3>  {leaveStats.map((stat, index) => (
-    <Col
-      key={stat.title}
-      xs={24}
-      sm={12}
-      md={12}
-      lg={6}
-      className="mb-4" // Adding margin-bottom to each column for spacing
-    >
-      <Card
-        className="shadow hover-card"
-        style={{
-          borderTop: `4px solid ${stat.color}`,
-          borderLeft: "none",
-          borderRight: "none",
-          borderBottom: "none",
-          borderRadius: 4,
-          height: "100%",
-        }}
-      >
-        <div className="d-flex align-items-center justify-content-center flex-column">
-          <div style={{ fontSize: 30 }}>{stat.icon}</div>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: "bold" }}>
-              {stat.title}
-            </div>
-            <Statistic
-              value={stat.value}
-              valueStyle={{
-                fontSize: 20,
-                fontWeight: "bold",
-                color: stat.color,
-                textAlign: "center",
-              }}
-            />
-          </div>
+        <div className="d-flex justify-content-between ">
+          <h3>
+            <FontAwesomeIcon icon={faCalendar} />
+            <span className="ms-1">Leave Summary</span>
+          </h3>
+
+          <Button
+            color="primary"
+            variant="filled"
+            size="large"
+            loading={refreshing}
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+          >
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
         </div>
-      </Card>
-    </Col>
-  ))}
-</div>
+        {leaveStats.map((stat, index) => (
+          <Col
+            key={stat.title}
+            xs={24}
+            sm={12}
+            md={12}
+            lg={6}
+            className="mb-4 mt-3"
+          >
+            <Card
+              className="shadow hover-leave-card"
+              loading={refreshing}
+              style={{
+                borderTop: `4px solid ${stat.color}`,
+                borderLeft: "none",
+                borderRight: "none",
+                borderBottom: "none",
+                borderRadius: 4,
+                height: "100%",
+              }}
+            >
+              <div className="d-flex align-items-center justify-content-center flex-column">
+                <div style={{ fontSize: 30 }}>{stat.icon}</div>
+                <div>
+                  <div style={{ fontSize: 16 }}>{stat.title}</div>
+                  <Statistic
+                    value={stat.value}
+                    valueStyle={{
+                      fontSize: 20,
+                      fontWeight: "bold",
+                      color: stat.color,
+                      textAlign: "center",
+                    }}
+                  />
+                </div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </div>
 
-
-
-      <div className="row mt-5">
+      <div className="row mt-lg-5">
         <div className="col-12 col-lg-6 mt-5 mt-lg-0">
           <Card
             className="shadow hover-card "
@@ -465,7 +823,7 @@ export default function Leave({
                   />
                 </Form.Item>
 
-                <Form.Item label="Today No. of Days">
+                <Form.Item label="Total No. of Days">
                   <Input size="large" value={leaveDuration} disabled />
                 </Form.Item>
 
@@ -494,7 +852,7 @@ export default function Leave({
                         : "Enter the reason for leave"
                     }
                     allowClear
-                    rows={8}
+                    rows={5}
                   />
                 </Form.Item>
 
@@ -503,8 +861,12 @@ export default function Leave({
                   size="large"
                   className="mt-2"
                   onClick={handleSubmitLeave}
+                  disabled={loading}
+                  loading={loading}
                 >
-                  Submit leave request
+                  {loading
+                    ? "Submitting Leave Request..."
+                    : "Submit Leave Request"}
                 </Button>
               </div>
             </Form>
@@ -525,7 +887,7 @@ export default function Leave({
                 fullscreen={false}
                 value={selectedDate}
                 onSelect={(value) => setSelectedDate(value)}
-                className="rounded-3 mt-2 p-lg-2"
+                className="rounded-3 mt-3 p-lg-2"
                 dateFullCellRender={(date) => {
                   const event = getHolidayEvent(date);
                   const isHoliday = !!event;
@@ -586,6 +948,68 @@ export default function Leave({
               </div>
             </Space>
           </Card>
+        </div>
+
+        <div className="row">
+          <div className="col-12 mt-5">
+            <Card
+              bordered={false}
+              className="shadow hover-card "
+              style={{ borderRadius: 16 }}
+            >
+              <h3>
+                <FontAwesomeIcon icon={faCalendarPlus} />
+                <span className="ms-1">Leave Request Report</span>
+              </h3>
+              <div className="row align-items-center mt-3">
+                {/* Search Input */}
+                <div className="col-12 col-lg-6 mb-2 mb-lg-0">
+                  <Input
+                    placeholder="Search"
+                    prefix={<SearchOutlined />}
+                    allowClear
+                    value={searchText}
+                    onChange={handleSearch}
+                    style={{ width: "100%" }}
+                    size="large"
+                  />
+                </div>
+
+                {/* Refresh Button */}
+                <div className="col-12 col-lg-6">
+                  <div className="d-flex justify-content-lg-end gap-2">
+                    <Button
+                      type="primary"
+                      size="large"
+                      loading={tableRefresh}
+                      icon={<ReloadOutlined />}
+                      onClick={handleTableRefresh}
+                    >
+                      {tableRefresh ? "Refreshing..." : "Refresh"}
+                    </Button>
+                    <Button
+                      variant="solid"
+                      color="danger"
+                      size="large"
+                      icon={<ArrowDownOutlined />}
+                      onClick={exportToExcel}
+                    >
+                      Export
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <Table
+                columns={columns}
+                dataSource={filteredData}
+                rowKey={(record, index) => index}
+                loading={tableRefresh}
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: "max-content" }}
+                className="mt-3"
+              />
+            </Card>
+          </div>
         </div>
       </div>
     </div>
