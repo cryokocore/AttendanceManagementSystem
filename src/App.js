@@ -36,6 +36,7 @@ import AuthForm from "./Pages/Login.jsx";
 import Punch from "./Pages/Punch.jsx";
 import Sidebar from "./Pages/Sidebar.jsx";
 import Leave from "./Pages/Leave.jsx";
+import Dashboard from "./Pages/Dashboard.jsx";
 
 
 function App() {
@@ -76,6 +77,10 @@ function App() {
                     <Route
                     path="leave"
                     element={<Leave user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
+                  />
+                        <Route
+                    path="dashboard"
+                    element={<Dashboard user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
                   />
                 </Routes>
               </div>

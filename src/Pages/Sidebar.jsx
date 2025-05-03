@@ -353,18 +353,17 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
                   padding: "5px",
                   background: "linear-gradient(135deg, #E6F4FF, #8abee5)",
                   textAlign: "center",
-                  color: "#fff",
                   borderBottomLeftRadius: "20px",
                   borderBottomRightRadius: "20px",
                 }}
               >
                 <img src={logo} alt="Logo" />
                 <h3
-                  style={{ marginTop: 10, marginBottom: 0, fontWeight: "600" }}
+                  style={{ marginTop: 10, marginBottom: 0, fontWeight: "600" }} className="text-dark"
                 >
                   Attendance
                 </h3>
-                <span>Management System</span>
+                <span  className="text-dark">Management System</span>
                 <div
                   style={{
                     marginTop: 5,
@@ -380,11 +379,12 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
                       backgroundColor: "#662D91",
                       fontSize: "22px",
                     }}
+                    
                   >
                     {username.slice(0, 2).toUpperCase()}
                   </Avatar>
 
-                  <div style={{ color: "#fff", textAlign: "center" }}>
+                  <div style={{ color: "#fff", textAlign: "center" }} className="text-dark">
                     <p style={{ margin: 0, fontSize: 18 }}>
                       <FontAwesomeIcon icon={faUser} className="me-2" />
                       {username}
@@ -482,10 +482,10 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
             }}
           >
             <img src={logo} alt="Logo" />
-            <h3 style={{ marginTop: 10, marginBottom: 0, fontWeight: "600" }}>
+            <h3 style={{ marginTop: 10, marginBottom: 0, fontWeight: "600" }}  className="text-dark">
               Attendance
             </h3>
-            <span>Management System</span>
+            <span  className="text-dark">Management System</span>
             <div
               style={{
                 marginTop: 20,
@@ -505,7 +505,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
                 {username.slice(0, 2).toUpperCase()}
               </Avatar>
 
-              <div style={{ color: "#fff", textAlign: "center" }}>
+              <div style={{ color: "#fff", textAlign: "center" }}  className="text-dark">
                 <p style={{ margin: 0, fontSize: 18 }}>
                   <FontAwesomeIcon icon={faUser} className="me-2" />
                   {username}

@@ -17,9 +17,9 @@ import {
   Statistic,
   TimePicker,
   Tag,
+  Modal,
 } from "antd";
 import { getDistance } from "geolib";
-import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as XLSX from "xlsx-js-style";
 import {
@@ -58,9 +58,13 @@ import {
   ExclamationCircleOutlined,
   MinusCircleOutlined,
   SyncOutlined,
+  EyeTwoTone,
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
+import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(timezone);
 dayjs.extend(utc);
@@ -69,7 +73,9 @@ message.config({
 });
 const { Option } = Select;
 const { RangePicker } = DatePicker;
-
+message.config({
+  maxCount: 2,
+});
 export default function Leave({
   user,
   employeeId,
@@ -92,9 +98,11 @@ export default function Leave({
   const [refreshing, setRefreshing] = useState(false);
   const [disableButton, setdisableButton] = useState(false);
   const [form] = Form.useForm();
+  const [modalForm] = Form.useForm();
   const [formLayout, setFormLayout] = useState("vertical");
   const [loading, setLoading] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
+  const [exportDisable, setExportDisable] = useState(false);
   const [leaveDuration, setLeaveDuration] = useState(null);
   const [leaveBalances, setLeaveBalances] = useState({
     totalAvailable: 0,
@@ -108,6 +116,31 @@ export default function Leave({
   });
   const [tableRefresh, setTableRefresh] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [startDateFilter, setStartDateFilter] = useState(null);
+  const [endDateFilter, setEndDateFilter] = useState(null);
+  const handleView = (record) => {
+    setSelectedRecord(record);
+    setIsModalVisible(true);
+  };
+  useEffect(() => {
+    if (selectedRecord) {
+      form.setFieldsValue({
+        leaveType: selectedRecord.leaveType,
+        dateRange: selectedRecord.dateRange
+          ? selectedRecord.dateRange.split(",").map((d) => dayjs(d.trim()))
+          : [],
+        reason: selectedRecord.reason,
+      });
+      setLeaveDuration(selectedRecord.leaveDuration);
+    }
+  }, [selectedRecord, form]);
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setSelectedRecord(null);
+  };
 
   const handleSearch = (e) => {
     setSearchText(e.target.value.toLowerCase());
@@ -154,12 +187,13 @@ export default function Leave({
   useEffect(() => {
     fetchLeaveBalance();
     fetchLeaveRequests();
-  }, [employeeId]); // Re-run whenever employeeId changes
+  }, [employeeId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchLeaveBalance();
     setRefreshing(false);
+    message.success("Table updated successfully");
   };
 
   const handleTableRefresh = async () => {
@@ -169,34 +203,73 @@ export default function Leave({
   };
 
   const exportToExcel = () => {
-    const searchString = normalize(searchText);
-  
-    const filteredData = searchString
-      ? leaveRequests.filter((item) => {
-          const fromDate = item.dateRange?.split(",")[0]?.trim() || "";
-          const toDate = item.dateRange?.split(",")[1]?.trim() || "";
-          const valuesToSearch = [
-            item.leaveType,
-            item.reason,
-            item.leaveDuration, // Not `duration`
-            item.status,
-            fromDate,
-            toDate,
-          ];
-          return valuesToSearch.some((value) =>
-            normalize(value).includes(searchString)
-          );
-        })
-      : leaveRequests;
-  
+    const filteredData = leaveRequests.filter((item) => {
+      const [fromDateStr = "", toDateStr = ""] =
+        item.dateRange?.split(",")?.map((s) => s.trim()) || [];
+
+      const fromDate = dayjs(fromDateStr);
+      const toDate = dayjs(toDateStr);
+
+      console.log("Item:", item);
+      console.log(
+        "From Date String:",
+        fromDateStr,
+        "| Parsed:",
+        fromDate.format(),
+        "| Valid:",
+        fromDate.isValid()
+      );
+      console.log(
+        "To Date String:",
+        toDateStr,
+        "| Parsed:",
+        toDate.format(),
+        "| Valid:",
+        toDate.isValid()
+      );
+      console.log(
+        "Start Filter:",
+        startDateFilter,
+        "| End Filter:",
+        endDateFilter
+      );
+
+      const valuesToSearch = [
+        item.leaveType,
+        item.reason,
+        item.duration,
+        item.status,
+        fromDateStr,
+        toDateStr,
+      ];
+
+      const searchMatch =
+        !searchText ||
+        valuesToSearch.some((value) =>
+          normalize(value).includes(normalize(searchText))
+        );
+
+      const dateMatch =
+        !startDateFilter ||
+        !endDateFilter ||
+        (fromDate.isValid() &&
+          toDate.isValid() &&
+          dayjs(toDate).isSameOrAfter(dayjs(startDateFilter), "day") &&
+          dayjs(fromDate).isSameOrBefore(dayjs(endDateFilter), "day"));
+
+      console.log("searchMatch:", searchMatch, "| dateMatch:", dateMatch);
+
+      return searchMatch && dateMatch;
+    });
+
     console.log("Raw leaveRequests:", leaveRequests);
     console.log("Filtered export data:", filteredData);
-  
+
     if (!filteredData.length) {
       console.warn("No data to export.");
       return;
     }
-  
+
     const exportData = filteredData.map((item) => {
       const [fromRaw, toRaw] = (item.dateRange || "").split(",");
       const fromDate = dayjs(fromRaw).isValid()
@@ -205,7 +278,7 @@ export default function Leave({
       const toDate = dayjs(toRaw).isValid()
         ? dayjs(toRaw).format("MMM D, YYYY HH:mm:ss")
         : "-";
-  
+
       return {
         "Employee ID": employeeId || "-",
         "Employee Name": employeeName || "-",
@@ -219,73 +292,69 @@ export default function Leave({
         Status: item.status || "-",
       };
     });
-  
+
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-    
-        // Style the headers
-        const range = XLSX.utils.decode_range(worksheet["!ref"]);
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            if (!worksheet[cellAddress]) continue;
-    
-            worksheet[cellAddress].s = {
-              font: {
-                name: "Arial",
-                sz: R === 0 ? 14 : 10, // Larger for header
-                bold: R === 0 ? true : false,
-                color: { rgb: "000000" },
-              },
-              alignment: {
-                horizontal: "center",
-                vertical: "center",
-                wrapText: true,
-              },
-              border: {
-                top: { style: "thin", color: { rgb: "000000" } },
-                bottom: { style: "thin", color: { rgb: "000000" } },
-                left: { style: "thin", color: { rgb: "000000" } },
-                right: { style: "thin", color: { rgb: "000000" } },
-              },
-              fill:
-                R === 0
-                  ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
-                  : undefined,
-            };
-          }
-        }
-    
-        worksheet["!cols"] = [
-          { wch: 20 }, // Employee ID
-          { wch: 25 }, // Employee Name
-          { wch: 25 }, // Designation
-          { wch: 20 }, // Location
-          { wch: 20 }, // Leave Type
-          { wch: 25 }, // From Date
-          { wch: 25 }, // To Date
-          { wch: 100 }, // Reason
-          { wch: 20 }, // Leave Duration
-          { wch: 20 }, // Status
-        ];
-    
+    // Style the headers
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font: {
+            name: "Arial",
+            sz: R === 0 ? 14 : 10, // Larger for header
+            bold: R === 0 ? true : false,
+            color: { rgb: "000000" },
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+          fill:
+            R === 0
+              ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
+              : undefined,
+        };
+      }
+    }
+
+    worksheet["!cols"] = [
+      { wch: 20 }, // Employee ID
+      { wch: 25 }, // Employee Name
+      { wch: 25 }, // Designation
+      { wch: 20 }, // Location
+      { wch: 20 }, // Leave Type
+      { wch: 25 }, // From Date
+      { wch: 25 }, // To Date
+      { wch: 100 }, // Reason
+      { wch: 20 }, // Leave Duration
+      { wch: 20 }, // Status
+    ];
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Leave Report");
-  
+
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
     });
-  
+
     const blob = new Blob([excelBuffer], {
       type: "application/octet-stream",
     });
-  
+
     saveAs(blob, `${employeeId}_${employeeName}_Leave_Report.xlsx`);
   };
-  
-  
-  
 
   const leaveStats = [
     {
@@ -369,6 +438,7 @@ export default function Leave({
 
     fetchHolidays();
   }, []);
+
   useEffect(() => {
     const values = form.getFieldsValue();
     const dateRange = values["Date Range"];
@@ -428,23 +498,77 @@ export default function Leave({
   };
 
   const normalize = (text) => String(text).toLowerCase().replace(/\s+/g, "");
+
   const filteredData = leaveRequests.filter((item) => {
-    const fromDate = item.dateRange?.split(",")[0]?.trim() || "";
-    const toDate = item.dateRange?.split(",")[1]?.trim() || "";
+    const [fromDateStr = "", toDateStr = ""] =
+      item.dateRange?.split(",")?.map((s) => s.trim()) || [];
+
+    const fromDate = dayjs(fromDateStr);
+    const toDate = dayjs(toDateStr);
+
+    console.log("Item:", item);
+    console.log(
+      "From Date String:",
+      fromDateStr,
+      "| Parsed:",
+      fromDate.format(),
+      "| Valid:",
+      fromDate.isValid()
+    );
+    console.log(
+      "To Date String:",
+      toDateStr,
+      "| Parsed:",
+      toDate.format(),
+      "| Valid:",
+      toDate.isValid()
+    );
+    console.log(
+      "Start Filter:",
+      startDateFilter,
+      "| End Filter:",
+      endDateFilter
+    );
 
     const valuesToSearch = [
       item.leaveType,
       item.reason,
       item.duration,
       item.status,
-      fromDate,
-      toDate,
+      fromDateStr,
+      toDateStr,
     ];
 
-    return valuesToSearch.some((value) =>
-      normalize(value).includes(normalize(searchText))
-    );
+    const searchMatch =
+      !searchText ||
+      valuesToSearch.some((value) =>
+        normalize(value).includes(normalize(searchText))
+      );
+
+    const dateMatch =
+      !startDateFilter ||
+      !endDateFilter ||
+      (fromDate.isValid() &&
+        toDate.isValid() &&
+        dayjs(toDate).isSameOrAfter(dayjs(startDateFilter), "day") &&
+        dayjs(fromDate).isSameOrBefore(dayjs(endDateFilter), "day"));
+
+    console.log("searchMatch:", searchMatch, "| dateMatch:", dateMatch);
+
+    return searchMatch && dateMatch;
   });
+
+  useEffect(() => {
+    if ((startDateFilter || endDateFilter) && filteredData.length === 0) {
+      message.error("No data found for the selected date");
+      setExportDisable(true);
+    } else if (searchText && filteredData.length === 0) {
+      message.error("No data found for your search");
+      setExportDisable(true);
+    } else {
+      setExportDisable(false);
+    }
+  }, [searchText, startDateFilter, endDateFilter, filteredData]);
 
   const columns = [
     // {
@@ -470,9 +594,9 @@ export default function Leave({
       width: 150,
       ellipsis: true,
       render: (text) => (
-        <Tooltip title={text}>
+        // <Tooltip title={text}>
           <span>{text}</span>
-        </Tooltip>
+        // </Tooltip>
       ),
     },
     {
@@ -486,9 +610,9 @@ export default function Leave({
           ? dayjs(fromDate).format("MMM D, YYYY HH:mm")
           : "-";
         return (
-          <Tooltip title={formatted}>
+          // <Tooltip title={formatted}>
             <span>{formatted}</span>
-          </Tooltip>
+          // </Tooltip>
         );
       },
     },
@@ -503,9 +627,9 @@ export default function Leave({
           ? dayjs(toDate).format("MMM D, YYYY HH:mm")
           : "-";
         return (
-          <Tooltip title={formatted}>
-            <span>{formatted}</span>
-          </Tooltip>
+          // <Tooltip title={formatted}>
+          <span>{formatted}</span>
+          // </Tooltip>
         );
       },
     },
@@ -514,44 +638,45 @@ export default function Leave({
       dataIndex: "reason",
       width: 300,
       ellipsis: true,
-      render: (text) => (
-        <Tooltip
-          title={
-            <div
-              style={{
-                maxWidth: 300,
-                whiteSpace: "normal",
-                wordBreak: "break-word", // handles long unbroken strings
-              }}
-            >
-              {text}
-            </div>
-          }
-        >
-          <span
-            style={{
-              display: "inline-block",
-              width: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              verticalAlign: "middle",
-            }}
-          >
-            {text}
-          </span>
-        </Tooltip>
-      ),
-    },
+      render: (text) =>
+        // <Tooltip
+        //   title={
+        //     <div
+        //       style={{
+        //         maxWidth: 100,
+        //         whiteSpace: "normal",
+        //         wordBreak: "break-word",
+        //       }}
+        //     >
+        //       {text}
+        //     </div>
+        //   }
+        // >
+        //   <span
+        //     style={{
+        //       display: "inline-block",
+        //       width: "100%",
+        //       overflow: "hidden",
+        //       textOverflow: "ellipsis",
+        //       whiteSpace: "nowrap",
+        //       verticalAlign: "middle",
+        //     }}
+        //   >
+        //     {text}
+        //   </span>
+        // </Tooltip>
+
+        <span>{text}</span>
+      },
     {
       title: "Leave Duration",
       dataIndex: "leaveDuration",
       width: 130,
       ellipsis: true,
       render: (text) => (
-        <Tooltip title={text}>
+        // <Tooltip title={text}>
           <span>{text}</span>
-        </Tooltip>
+        // </Tooltip>
       ),
     },
     {
@@ -577,7 +702,7 @@ export default function Leave({
         }
 
         return (
-          <Tooltip title={text}>
+          // <Tooltip title={text}>
             <Tag
               color={color}
               icon={icon}
@@ -590,11 +715,31 @@ export default function Leave({
             >
               {text}
             </Tag>
-          </Tooltip>
+          // </Tooltip>
         );
       },
     },
+    {
+      title: "Action",
+      key: "action",
+      fixed: "right",
+      width: 100,
+      render: (_, record) => (
+        <Button
+          color="purple"
+          variant="filled"
+          size="large"
+          onClick={() => handleView(record)}
+        >
+          <EyeTwoTone /> View
+        </Button>
+      ),
+    },
   ];
+
+  const styl = `.ant-picker-large {
+    padding: 5px;
+}`;
 
   const handleSubmitLeave = async () => {
     if (leaveDuration === 0) {
@@ -670,101 +815,404 @@ export default function Leave({
     return holiday ? holiday.event : null;
   };
   return (
-    <div
-      className="container py-2 border border-danger"
-      style={{ maxWidth: "1200px", margin: "0 auto", minHeight: "100vh" }}
-    >
-      <h2 className="text-center ms-1 m-0 p-0">Leave Balance/Request</h2>
-      <p className="text-center m-0 p-0" style={{ fontSize: "14px" }}>
-        Manage your leave requests and balances
-      </p>
-      <div className="row mt-3 mt-lg-5">
-        <div className="d-flex justify-content-between ">
-          <h3>
-            <FontAwesomeIcon icon={faCalendar} />
-            <span className="ms-1">Leave Summary</span>
-          </h3>
+    <>
+      <style>{styl}</style>
 
-          <Button
-            color="primary"
-            variant="filled"
-            size="large"
-            loading={refreshing}
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-          >
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
-        {leaveStats.map((stat, index) => (
-          <Col
-            key={stat.title}
-            xs={24}
-            sm={12}
-            md={12}
-            lg={6}
-            className="mb-4 mt-3"
-          >
-            <Card
-              className="shadow hover-leave-card"
+      <div
+        className="container py-2"
+        style={{ maxWidth: "1200px", margin: "0 auto", minHeight: "100vh" }}
+      >
+        <h2 className="text-center ms-1 m-0 p-0">Leave Balance/Request</h2>
+        <p className="text-center m-0 p-0" style={{ fontSize: "14px" }}>
+          Manage your leave requests and balances
+        </p>
+        <div className="row mt-3 mt-lg-5">
+          <div className="d-flex justify-content-between ">
+            <h3>
+              <FontAwesomeIcon icon={faCalendar} />
+              <span className="ms-1">Leave Summary</span>
+            </h3>
+
+            <Button
+              color="primary"
+              variant="filled"
+              size="large"
               loading={refreshing}
-              style={{
-                borderTop: `4px solid ${stat.color}`,
-                borderLeft: "none",
-                borderRight: "none",
-                borderBottom: "none",
-                borderRadius: 4,
-                height: "100%",
-              }}
+              icon={<ReloadOutlined />}
+              onClick={handleRefresh}
             >
-              <div className="d-flex align-items-center justify-content-center flex-column">
-                <div style={{ fontSize: 30 }}>{stat.icon}</div>
-                <div>
-                  <div style={{ fontSize: 16 }}>{stat.title}</div>
-                  <Statistic
-                    value={stat.value}
-                    valueStyle={{
-                      fontSize: 20,
-                      fontWeight: "bold",
-                      color: stat.color,
-                      textAlign: "center",
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
+          </div>
+          {leaveStats.map((stat, index) => (
+            <Col
+              key={stat.title}
+              xs={24}
+              sm={12}
+              md={12}
+              lg={6}
+              className="mb-4 mt-3"
+            >
+              <Card
+                className=" hover-leave-card"
+                loading={refreshing}
+                style={{
+                  borderTop: `4px solid ${stat.color}`,
+                  borderLeft: "none",
+                  borderRight: "none",
+                  borderBottom: "none",
+                  borderRadius: 4,
+                  height: "100%",
+                }}
+              >
+                <div className="d-flex align-items-center justify-content-center flex-column">
+                  <div style={{ fontSize: 30 }}>{stat.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 16 }}>{stat.title}</div>
+                    <Statistic
+                      value={stat.value}
+                      valueStyle={{
+                        fontSize: 20,
+                        fontWeight: "bold",
+                        color: stat.color,
+                        textAlign: "center",
+                      }}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </div>
+
+        <div className="row mt-lg-5">
+          <div className="col-12 col-lg-6 mt-5 mt-lg-0">
+            <Card
+              className="shadow hover-card "
+              style={{ borderRadius: 16, height: "100%" }}
+            >
+              <h3>
+                <FontAwesomeIcon icon={faCalendarPlus} />
+                <span className="ms-1">Leave Request</span>
+              </h3>
+              <Form layout={formLayout} form={form}>
+                <div className="col-12 ">
+                  <Form.Item
+                    label={
+                      <span>
+                        <FontAwesomeIcon
+                          icon={faList}
+                          style={{ marginRight: "2px" }}
+                        />
+                        Leave Type
+                      </span>
+                    }
+                    name="Leave Type"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please select leave type",
+                      },
+                    ]}
+                  >
+                    <Select size="large" placeholder="Select leave type">
+                      <Option
+                        value="Personal/sick leave"
+                        disabled={leaveBalances.personalAvailable === 0}
+                      >
+                        Personal/sick leave
+                      </Option>
+
+                      <Option
+                        value="Earned leave"
+                        disabled={leaveBalances.earnedAvailable === 0}
+                      >
+                        Earned leave
+                      </Option>
+                      <Option value="Unpaid leave">Unpaid leave</Option>
+                      <Option value="Compoff leave">Compoff leave</Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span>
+                        <FontAwesomeIcon
+                          icon={faClock}
+                          style={{ marginRight: "2px" }}
+                        />
+                        Date Range
+                      </span>
+                    }
+                    name="Date Range"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please select date range",
+                      },
+                    ]}
+                  >
+                    <RangePicker
+                      showTime
+                      size="large"
+                      style={{ width: "100%" }}
+                      onChange={(dates) => {
+                        if (dates && dates.length === 2) {
+                          const [startDate, endDate] = dates;
+                          const duration = calculateLeaveDuration(
+                            startDate,
+                            endDate
+                          );
+                          setLeaveDuration(duration);
+                        } else {
+                          setLeaveDuration(null);
+                        }
+                      }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item label="Total No. of Days">
+                    <Input size="large" value={leaveDuration} disabled />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span>
+                        <FontAwesomeIcon
+                          icon={faPenToSquare}
+                          style={{ marginRight: "2px" }}
+                        />
+                        Reason for leave
+                      </span>
+                    }
+                    name="Reason for leave"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please enter the reason for leave",
+                      },
+                    ]}
+                  >
+                    <TextArea
+                      placeholder={
+                        form.getFieldValue("Leave Type") === "Compoff leave"
+                          ? "Please enter the dates that you worked on to take comp off"
+                          : "Enter the reason for leave"
+                      }
+                      allowClear
+                      rows={5}
+                    />
+                  </Form.Item>
+
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="mt-2"
+                    onClick={handleSubmitLeave}
+                    disabled={loading}
+                    loading={loading}
+                  >
+                    {loading
+                      ? "Submitting Leave Request..."
+                      : "Submit Leave Request"}
+                  </Button>
+                </div>
+              </Form>
+            </Card>
+          </div>
+          <div className="col-12 col-lg-6 mt-5 mt-lg-0">
+            <Card
+              bordered={false}
+              className="shadow hover-card "
+              style={{ borderRadius: 16, height: "100%" }}
+            >
+              <h3>
+                <FontAwesomeIcon icon={faCalendarDays} />
+                <span className="ms-1">Holiday Calendar</span>
+              </h3>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <Calendar
+                  fullscreen={false}
+                  value={selectedDate}
+                  onSelect={(value) => setSelectedDate(value)}
+                  className="rounded-3 mt-3 p-lg-2"
+                  dateFullCellRender={(date) => {
+                    const event = getHolidayEvent(date);
+                    const isHoliday = !!event;
+                    const isSunday = date.day() === 0;
+                    return (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "4px 0",
+                          height: "100%",
+                          backgroundColor: isHoliday
+                            ? "rgb(255, 223, 220)"
+                            : undefined,
+                          borderRadius: "8px",
+                          marginLeft: "2px",
+                          marginRight: "2px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: isHoliday || isSunday ? "red" : "inherit",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {date.date()}
+                        </div>
+                        {event && (
+                          <Tooltip title={event} color="red">
+                            <div
+                              style={{
+                                color: "blue",
+                                fontSize: "10px",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: "100%",
+                                padding: "4px",
+                              }}
+                            >
+                              {event}
+                            </div>
+                          </Tooltip>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+
+                <div className="rounded-3 mt-1 text-center hover-status">
+                  <Button
+                    type="link"
+                    icon={<FontAwesomeIcon icon={faCalendarCheck} />}
+                    onClick={() => setSelectedDate(dayjs())}
+                    style={{ fontSize: "18px" }}
+                  >
+                    Today
+                  </Button>
+                </div>
+              </Space>
+            </Card>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-12 mt-5">
+            <Card
+              bordered={false}
+              className="shadow hover-card "
+              style={{ borderRadius: 16 }}
+            >
+              <h3>
+                <FontAwesomeIcon icon={faCalendarPlus} />
+                <span className="ms-1">Leave Request Report</span>
+              </h3>
+              <div className="row align-items-center mt-3">
+                <div className="col-12 col-lg-4 mb-2 mb-lg-0">
+                  <DatePicker
+                    placeholder="From Date"
+                    size="large"
+                    value={startDateFilter}
+                    onChange={(date) => {
+                      setStartDateFilter(date);
+                      setSearchText("");
+                      // setIsSearchActive(false);
+                      // setSelectedStatus(null);
+                      if (
+                        endDateFilter &&
+                        date &&
+                        date.isAfter(endDateFilter, "day") // Compare with day precision
+                      ) {
+                        message.error("Start date cannot be after end date.");
+                      }
                     }}
+                    // disabled={isSearchActive || selectedStatus !== null}
+                  />
+
+                  <DatePicker
+                    placeholder="To Date"
+                    size="large"
+                    value={endDateFilter}
+                    onChange={(date) => {
+                      setEndDateFilter(date);
+                      setSearchText("");
+                      // setIsSearchActive(false);
+                      // setSelectedStatus(null);
+                      if (
+                        startDateFilter &&
+                        date &&
+                        date.isBefore(startDateFilter, "day") // Compare with day precision
+                      ) {
+                        message.error("End date cannot be before start date.");
+                      }
+                    }}
+                    style={{ marginRight: 16 }}
+                    // disabled={isSearchActive || selectedStatus !== null}
+                    className="mt-2 mt-lg-0 ms-0 ms-lg-2"
                   />
                 </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </div>
 
-      <div className="row mt-lg-5">
-        <div className="col-12 col-lg-6 mt-5 mt-lg-0">
-          <Card
-            className="shadow hover-card "
-            style={{ borderRadius: 16, height: "100%" }}
-          >
-            <h3>
-              <FontAwesomeIcon icon={faCalendarPlus} />
-              <span className="ms-1">Leave Request</span>
-            </h3>
-            <Form layout={formLayout} form={form}>
-              <div className="col-12 ">
+                <div className="col-12 col-lg-4 mb-2 mb-lg-0">
+                  <Input
+                    placeholder="Search"
+                    prefix={<SearchOutlined />}
+                    allowClear
+                    value={searchText}
+                    onChange={handleSearch}
+                    style={{ width: "100%" }}
+                    size="large"
+                  />
+                </div>
+
+                {/* Refresh Button */}
+                <div className="col-12 col-lg-4">
+                  <div className="d-flex justify-content-lg-end gap-2">
+                    <Button
+                      type="primary"
+                      size="large"
+                      loading={tableRefresh}
+                      icon={<ReloadOutlined />}
+                      onClick={handleTableRefresh}
+                    >
+                      {tableRefresh ? "Refreshing..." : "Refresh"}
+                    </Button>
+                    <Button
+                      variant="solid"
+                      color="danger"
+                      size="large"
+                      icon={<ArrowDownOutlined />}
+                      onClick={exportToExcel}
+                      disabled={exportDisable}
+                    >
+                      Export
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <Table
+                columns={columns}
+                dataSource={filteredData}
+                rowKey={(record, index) => index}
+                loading={tableRefresh}
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: "max-content" }}
+                className="mt-3"
+              />
+            </Card>
+            <Modal
+              open={isModalVisible}
+              onCancel={handleCloseModal}
+              footer={null}
+            >
+              <h4>Leave Request Details</h4>
+              <Form layout={formLayout} form={form}>
                 <Form.Item
-                  label={
-                    <span>
-                      <FontAwesomeIcon
-                        icon={faList}
-                        style={{ marginRight: "2px" }}
-                      />
-                      Leave Type
-                    </span>
-                  }
-                  name="Leave Type"
+                  label="Leave Type"
+                  name="leaveType"
                   rules={[
-                    {
-                      required: true,
-                      message: "Please select leave type",
-                    },
+                    { required: true, message: "Please select leave type" },
                   ]}
                 >
                   <Select size="large" placeholder="Select leave type">
@@ -774,7 +1222,6 @@ export default function Leave({
                     >
                       Personal/sick leave
                     </Option>
-
                     <Option
                       value="Earned leave"
                       disabled={leaveBalances.earnedAvailable === 0}
@@ -787,21 +1234,10 @@ export default function Leave({
                 </Form.Item>
 
                 <Form.Item
-                  label={
-                    <span>
-                      <FontAwesomeIcon
-                        icon={faClock}
-                        style={{ marginRight: "2px" }}
-                      />
-                      Date Range
-                    </span>
-                  }
-                  name="Date Range"
+                  label="Date Range"
+                  name="dateRange"
                   rules={[
-                    {
-                      required: true,
-                      message: "Please select date range",
-                    },
+                    { required: true, message: "Please select date range" },
                   ]}
                 >
                   <RangePicker
@@ -828,16 +1264,8 @@ export default function Leave({
                 </Form.Item>
 
                 <Form.Item
-                  label={
-                    <span>
-                      <FontAwesomeIcon
-                        icon={faPenToSquare}
-                        style={{ marginRight: "2px" }}
-                      />
-                      Reason for leave
-                    </span>
-                  }
-                  name="Reason for leave"
+                  label="Reason for leave"
+                  name="reason"
                   rules={[
                     {
                       required: true,
@@ -846,172 +1274,20 @@ export default function Leave({
                   ]}
                 >
                   <TextArea
+                    rows={5}
+                    allowClear
                     placeholder={
-                      form.getFieldValue("Leave Type") === "Compoff leave"
+                      form.getFieldValue("leaveType") === "Compoff leave"
                         ? "Please enter the dates that you worked on to take comp off"
                         : "Enter the reason for leave"
                     }
-                    allowClear
-                    rows={5}
                   />
                 </Form.Item>
-
-                <Button
-                  type="primary"
-                  size="large"
-                  className="mt-2"
-                  onClick={handleSubmitLeave}
-                  disabled={loading}
-                  loading={loading}
-                >
-                  {loading
-                    ? "Submitting Leave Request..."
-                    : "Submit Leave Request"}
-                </Button>
-              </div>
-            </Form>
-          </Card>
-        </div>
-        <div className="col-12 col-lg-6 mt-5 mt-lg-0">
-          <Card
-            bordered={false}
-            className="shadow hover-card "
-            style={{ borderRadius: 16, height: "100%" }}
-          >
-            <h3>
-              <FontAwesomeIcon icon={faCalendarDays} />
-              <span className="ms-1">Holiday Calendar</span>
-            </h3>
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <Calendar
-                fullscreen={false}
-                value={selectedDate}
-                onSelect={(value) => setSelectedDate(value)}
-                className="rounded-3 mt-3 p-lg-2"
-                dateFullCellRender={(date) => {
-                  const event = getHolidayEvent(date);
-                  const isHoliday = !!event;
-                  const isSunday = date.day() === 0;
-                  return (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "4px 0",
-                        height: "100%",
-                        backgroundColor: isHoliday
-                          ? "rgb(255, 223, 220)"
-                          : undefined,
-                        borderRadius: "8px",
-                        marginLeft: "2px",
-                        marginRight: "2px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: isHoliday || isSunday ? "red" : "inherit",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {date.date()}
-                      </div>
-                      {event && (
-                        <Tooltip title={event} color="red">
-                          <div
-                            style={{
-                              color: "blue",
-                              fontSize: "10px",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              maxWidth: "100%",
-                              padding: "4px",
-                            }}
-                          >
-                            {event}
-                          </div>
-                        </Tooltip>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-
-              <div className="rounded-3 mt-1 text-center hover-status">
-                <Button
-                  type="link"
-                  icon={<FontAwesomeIcon icon={faCalendarCheck} />}
-                  onClick={() => setSelectedDate(dayjs())}
-                  style={{ fontSize: "18px" }}
-                >
-                  Today
-                </Button>
-              </div>
-            </Space>
-          </Card>
-        </div>
-
-        <div className="row">
-          <div className="col-12 mt-5">
-            <Card
-              bordered={false}
-              className="shadow hover-card "
-              style={{ borderRadius: 16 }}
-            >
-              <h3>
-                <FontAwesomeIcon icon={faCalendarPlus} />
-                <span className="ms-1">Leave Request Report</span>
-              </h3>
-              <div className="row align-items-center mt-3">
-                {/* Search Input */}
-                <div className="col-12 col-lg-6 mb-2 mb-lg-0">
-                  <Input
-                    placeholder="Search"
-                    prefix={<SearchOutlined />}
-                    allowClear
-                    value={searchText}
-                    onChange={handleSearch}
-                    style={{ width: "100%" }}
-                    size="large"
-                  />
-                </div>
-
-                {/* Refresh Button */}
-                <div className="col-12 col-lg-6">
-                  <div className="d-flex justify-content-lg-end gap-2">
-                    <Button
-                      type="primary"
-                      size="large"
-                      loading={tableRefresh}
-                      icon={<ReloadOutlined />}
-                      onClick={handleTableRefresh}
-                    >
-                      {tableRefresh ? "Refreshing..." : "Refresh"}
-                    </Button>
-                    <Button
-                      variant="solid"
-                      color="danger"
-                      size="large"
-                      icon={<ArrowDownOutlined />}
-                      onClick={exportToExcel}
-                    >
-                      Export
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <Table
-                columns={columns}
-                dataSource={filteredData}
-                rowKey={(record, index) => index}
-                loading={tableRefresh}
-                pagination={{ pageSize: 5 }}
-                scroll={{ x: "max-content" }}
-                className="mt-3"
-              />
-            </Card>
+              </Form>
+            </Modal>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

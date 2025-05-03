@@ -11,6 +11,7 @@ import {
   Space,
   Tooltip,
   Input,
+  Tag
 } from "antd";
 import { getDistance } from "geolib";
 import dayjs from "dayjs";
@@ -472,6 +473,7 @@ export default function Punch({
     setSearchText(null);
     await fetchAttendance();
     setRefreshing(false);
+    message.success("Table updated successfully");
   };
 
   const columns = [
@@ -558,27 +560,38 @@ export default function Punch({
     {
       title: "Status",
       dataIndex: "status",
-      width: 150,
+      width: 180,
       ellipsis: true,
       render: (text) => {
-        const color =
-          {
-            Present: "green",
-            Punched: "blue",
-            "Less than 9 hr": "red",
-            "Invalid Time": "orange",
-            Incomplete: "orange",
-            Absent: "red",
-            Unknown: "gray",
-          }[text] || "gray";
-
+        const colorMap = {
+          Present: "success",
+          Punched: "processing",
+          "Less than 9 hr": "error",
+          "Invalid Time": "warning",
+          Incomplete: "orange",
+          Absent: "red",
+          Unknown: "gray",
+        };
+      
+        const color = colorMap[text] || "gray";
+      
         return (
-          <Tooltip title={text}>
-            <span style={{ color, fontWeight: "bold" }}>{text}</span>
-          </Tooltip>
+          <Tag
+            color={color}
+            style={{
+              fontWeight: "bold",
+              fontSize: "13px",
+              padding: "4px 10px",
+              textTransform: "capitalize",
+            }}
+          >
+            {text || "-"}
+          </Tag>
         );
-      },
+      }
+      
     },
+   
   ];
 
   const getHolidayEvent = (date) => {
