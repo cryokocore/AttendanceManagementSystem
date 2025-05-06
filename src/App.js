@@ -1,30 +1,3 @@
-// import logo from './logo.svg';
-// import './App.css';
-// import Sidebar from "./Pages/Sidebar.jsx"
-// import "bootstrap/dist/css/bootstrap.min.css";
-// import "antd/dist/reset.css";
-// import Punch from './Pages/Punch.jsx';
-// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// function App() {
-//   return (
-// <Router>
-//       <div style={{ display: "flex"}}>
-//       <div style={{ width: "280px", flexShrink: 0, }}>
-//     <Sidebar />
-//   </div>
-//   <div >          <Routes>
-//             {/* <Route path="/" element={<Dashboard />} /> */}
-//             <Route path="/punchin/out" element={<Punch />} />
-//             {/* <Route path="/leave" element={<Leave />} /> */}
-//           </Routes>
-//         </div>
-//       </div>
-//     </Router>
-//   );
-// }
-
-// export default App;
-
 import {
   HashRouter as Router,
   Route,
@@ -37,8 +10,7 @@ import Punch from "./Pages/Punch.jsx";
 import Sidebar from "./Pages/Sidebar.jsx";
 import Leave from "./Pages/Leave.jsx";
 import Dashboard from "./Pages/Dashboard.jsx";
-
-
+import AdminDashboard from "./Pages/AdminDashboard.jsx";
 function App() {
   const [user, setUser] = useState(null);
   console.log("Current user:", user);
@@ -67,20 +39,60 @@ function App() {
                   user={user}
                   setUser={setUser}
                   username={user.username}
-                  employeeId={user.employeeId} 
+                  employeeId={user.employeeId}
                 />
                 <Routes>
+                  {(user.employeeId === "ST001" ||
+                    user.employeeId === "ST002") && (
+                    <Route
+                      path="admindashboard"
+                      element={
+                        <AdminDashboard
+                        user={user}
+                        employeeId={user.employeeId}
+                        employeeLocation={user.location}
+                        employeeName={user.username}
+                        employeeDesignation={user.designation}
+                        />
+                      }
+                    />
+                  )}
+
                   <Route
                     path="punchin/out"
-                    element={<Punch user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
+                    element={
+                      <Punch
+                        user={user}
+                        employeeId={user.employeeId}
+                        employeeLocation={user.location}
+                        employeeName={user.username}
+                        employeeDesignation={user.designation}
+                      />
+                    }
                   />
-                    <Route
+                  <Route
                     path="leave"
-                    element={<Leave user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
+                    element={
+                      <Leave
+                        user={user}
+                        employeeId={user.employeeId}
+                        employeeLocation={user.location}
+                        employeeName={user.username}
+                        employeeDesignation={user.designation}
+                      />
+                    }
                   />
-                        <Route
+                  <Route
                     path="dashboard"
-                    element={<Dashboard user={user} employeeId={user.employeeId} employeeLocation={user.location} employeeName={user.username} employeeDesignation={user.designation} />}
+                    element={
+                      <Dashboard
+                        user={user}
+                        employeeId={user.employeeId}
+                        employeeLocation={user.location}
+                        employeeName={user.username}
+                        employeeDesignation={user.designation}
+                      />
+                    }
                   />
                 </Routes>
               </div>

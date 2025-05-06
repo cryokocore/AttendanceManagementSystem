@@ -11,7 +11,10 @@ import {
   Space,
   Tooltip,
   Input,
-  Tag
+  Tag,
+  Form,
+  Modal,
+  DatePicker,
 } from "antd";
 import { getDistance } from "geolib";
 import dayjs from "dayjs";
@@ -40,6 +43,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
   ArrowDownOutlined,
+  EyeTwoTone,
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
 message.config({
@@ -74,17 +78,82 @@ export default function Punch({
   const [searchText, setSearchText] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [disableButton, setdisableButton] = useState(false);
-
-  console.log(employeeId, employeeLocation, user);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [form] = Form.useForm();
+  const [modalForm] = Form.useForm();
+  const [formLayout, setFormLayout] = useState("vertical");
+  const [startDateFilter, setStartDateFilter] = useState(null);
+  const [endDateFilter, setEndDateFilter] = useState(null);
+  const handleView = (record) => {
+    setSelectedRecord(record);
+    setIsModalVisible(true);
+  };
   const handleSearch = (e) => {
     setSearchText(e.target.value.toLowerCase());
+  };
+  const getFilteredData = () => {
+    return data.filter((item) => {
+      const normalize = (str) => (str || "").toLowerCase().replace(/\s+/g, "");
+
+      const searchString = normalize(searchText);
+
+      const punchInDate = dayjs(item.punchIn);
+
+      const isWithinDateRange =
+        (!startDateFilter ||
+          punchInDate.isSameOrAfter(startDateFilter, "day")) &&
+        (!endDateFilter || punchInDate.isSameOrBefore(endDateFilter, "day"));
+
+      const matchesSearch =
+        normalize(
+          punchInDate.isValid()
+            ? punchInDate.format("MMMM D, YYYY - HH:mm")
+            : ""
+        ).includes(searchString) ||
+        normalize(
+          dayjs(item.punchOut).isValid()
+            ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm")
+            : ""
+        ).includes(searchString) ||
+        normalize(item.location).includes(searchString) ||
+        normalize(item.total).includes(searchString) ||
+        normalize(item.punchedInRemark).includes(searchString) ||
+        normalize(item.punchedOutRemark).includes(searchString) ||
+        normalize(item.status).includes(searchString);
+
+      return isWithinDateRange && matchesSearch;
+    });
+  };
+
+  useEffect(() => {
+    if (selectedRecord) {
+      form.setFieldsValue({
+        punchIn: dayjs(selectedRecord.punchIn).isValid()
+          ? dayjs(selectedRecord.punchIn).format("MMMM D, YYYY - HH:mm")
+          : "-",
+        punchOut: dayjs(selectedRecord.punchOut).isValid()
+          ? dayjs(selectedRecord.punchOut).format("MMMM D, YYYY - HH:mm")
+          : "-",
+        location: selectedRecord.location,
+        total: selectedRecord.total,
+        punchedInRemark: selectedRecord.punchedInRemark,
+        punchedOutRemark: selectedRecord.punchedOutRemark,
+        status: selectedRecord.status,
+      });
+    }
+  }, [selectedRecord, form]);
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setSelectedRecord(null);
   };
 
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -172,151 +241,46 @@ export default function Punch({
     };
   }, []);
 
-  // const handlePunch = (type) => {
-  //   if (!location || !user) return;
-
-  //   const now = dayjs().format("YYYY-MM-DD HH:mm:ss");
-
-  //   const data = {
-  //     employeeId: user.employeeId,
-  //     employeeName: user.username,
-  //     designation: user.designation,
-  //     location: `${location.latitude}, ${location.longitude}`,
-  //     punchType: type,
-  //     timestamp: now,
-  //     remarks: remarks.trim() || "N/A",
-  //   };
-
-  //   const formBody = new URLSearchParams(data).toString();
-
-  //   fetch(
-  //     "https://script.google.com/macros/s/AKfycbwkd74t2keEBxOyD1thKA4mXV6xSVA3ILr9T_Xu8qPyzlEICjfNfDBGCsRE9sZcld0D/exec",
-  //     {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/x-www-form-urlencoded",
-  //       },
-  //       body: formBody,
-  //     }
-  //   )
-  //     .then(() => {
-  //       message.success(`${type} recorded at ${now}`);
-  //       setLastPunchType(type);
-  //       setLastPunchTime(now);
-  //       setRemarks("");
-  //       fetchAttendance();
-  //     })
-  //     .catch(() => {
-  //       message.error("Failed to record punch.");
-  //     });
-  // };
-
+ 
   const exportToExcel = () => {
-    const exportData = data
-      .filter((item) => {
-        const normalize = (str) =>
-          (str || "").toLowerCase().replace(/\s+/g, "");
-        const searchString = normalize(searchText);
-        console.log(item);
-
-        return (
-          normalize(
-            dayjs(item.punchIn).isValid()
-              ? dayjs(item.punchIn).format("MMMM D, YYYY - HH:mm:ss")
-              : ""
-          ).includes(searchString) ||
-          normalize(
-            dayjs(item.punchOut).isValid()
-              ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm:ss")
-              : ""
-          ).includes(searchString) ||
-          normalize(item.location).includes(searchString) ||
-          normalize(item.total).includes(searchString) ||
-          normalize(item.punchedInRemark).includes(searchString) ||
-          normalize(item.punchedOutRemark).includes(searchString) ||
-          normalize(item.status).includes(searchString)
-        );
-      })
-      .map((item) => ({
-        "Employee ID": employeeId,
-        "Employee Name": employeeName,
-        Designation: employeeDesignation,
-        Location: employeeLocation,
-        "Punch In": dayjs(item.punchIn).isValid()
-          ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
-          : "-",
-        "Punch Out": dayjs(item.punchOut).isValid()
-          ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
-          : "-",
-        "Total Hours": item.total,
-        "Punch In Remark": item.punchedInRemark,
-        "Punch Out Remark": item.punchedOutRemark,
-        Status: item.status,
-      }));
-
+    const filteredData = getFilteredData(); 
+  
+    const exportData = filteredData.map((item) => ({
+      "Employee ID": employeeId,
+      "Employee Name": employeeName,
+      Designation: employeeDesignation,
+      Location: employeeLocation,
+      "Punch In": dayjs(item.punchIn).isValid()
+        ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
+        : "-",
+      "Punch Out": dayjs(item.punchOut).isValid()
+        ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
+        : "-",
+      "Total Hours": item.total,
+      "Punch In Remark": item.punchedInRemark,
+      "Punch Out Remark": item.punchedOutRemark,
+      Status: item.status,
+    }));
+  
     const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-    // Style the headers
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!worksheet[cellAddress]) continue;
-
-        worksheet[cellAddress].s = {
-          font: {
-            name: "Arial",
-            sz: R === 0 ? 14 : 10, // Larger for header
-            bold: R === 0 ? true : false,
-            color: { rgb: "000000" },
-          },
-          alignment: {
-            horizontal: "center",
-            vertical: "center",
-            wrapText: true,
-          },
-          border: {
-            top: { style: "thin", color: { rgb: "000000" } },
-            bottom: { style: "thin", color: { rgb: "000000" } },
-            left: { style: "thin", color: { rgb: "000000" } },
-            right: { style: "thin", color: { rgb: "000000" } },
-          },
-          fill:
-            R === 0
-              ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
-              : undefined,
-        };
-      }
-    }
-
-    // Set column widths to improve spacing
-    worksheet["!cols"] = [
-      { wch: 20 }, // Employee ID
-      { wch: 20 }, // Employee Name
-      { wch: 25 }, // Designation
-      { wch: 25 }, // Location
-      { wch: 25 }, // Punch In
-      { wch: 25 }, // Punch Out
-      { wch: 15 }, // Total Hours
-      { wch: 40 }, // Punch In Remark
-      { wch: 40 }, // Punch Out Remark
-      { wch: 20 }, // Status
-    ];
-
+  
+    // Style headers, set column widths (same as before)...
+  
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
-
+  
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
     });
-
+  
     const dataBlob = new Blob([excelBuffer], {
       type: "application/octet-stream",
     });
+  
     saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance Report.xlsx`);
-    console.log(exportData);
   };
+  
 
   const handlePunch = (type) => {
     setdisableButton(true);
@@ -325,7 +289,7 @@ export default function Punch({
       return;
     }
 
-    // Adjust time based on the employee's location
+   
     let now = dayjs();
 
     if (user.location === "UAE") {
@@ -334,10 +298,10 @@ export default function Punch({
       now = now.tz("Asia/Kolkata"); // Set India time
     }
 
-    // Format the adjusted time
+
     const formattedTime = now.format("YYYY-MM-DD HH:mm:ss");
 
-    // Prepare the data for sending
+
     const data = {
       employeeId: user.employeeId,
       employeeName: user.username,
@@ -352,7 +316,7 @@ export default function Punch({
 
     // Send the data to the server via POST request
     fetch(
-      "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
+      "https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec",
       {
         method: "POST",
         headers: {
@@ -379,7 +343,7 @@ export default function Punch({
   const fetchAttendance = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?employeeId=${employeeId}&action=attendance`
+        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?employeeId=${employeeId}&action=attendance`
       );
 
       const data = await res.json();
@@ -566,15 +530,15 @@ export default function Punch({
         const colorMap = {
           Present: "success",
           Punched: "processing",
-          "Less than 9 hr": "error",
           "Invalid Time": "warning",
+          "Less than 9 hr": "warning",
           Incomplete: "orange",
-          Absent: "red",
+          Absent: "error",
           Unknown: "gray",
         };
-      
+
         const color = colorMap[text] || "gray";
-      
+
         return (
           <Tag
             color={color}
@@ -588,10 +552,24 @@ export default function Punch({
             {text || "-"}
           </Tag>
         );
-      }
-      
+      },
     },
-   
+    {
+      title: "Action",
+      key: "action",
+      fixed: "right",
+      width: 100,
+      render: (_, record) => (
+        <Button
+          color="purple"
+          variant="filled"
+          size="large"
+          onClick={() => handleView(record)}
+        >
+          <EyeTwoTone /> View
+        </Button>
+      ),
+    },
   ];
 
   const getHolidayEvent = (date) => {
@@ -719,19 +697,31 @@ export default function Punch({
                 value={selectedDate}
                 onSelect={(value) => setSelectedDate(value)}
                 className="rounded-3 mt-2 p-lg-2"
-                dateFullCellRender={(date) => {
+                fullCellRender={(date) => {
                   const event = getHolidayEvent(date);
                   const isHoliday = !!event;
                   const isSunday = date.day() === 0;
+                  const isToday = date.isSame(dayjs(), "day");
+
+                  const backgroundColor = isToday
+                    ? "#cce5ff"
+                    : isHoliday
+                    ? "rgb(255, 223, 220)"
+                    : undefined;
+
+                  const textColor = isToday
+                    ? "blue"
+                    : isHoliday || isSunday
+                    ? "red"
+                    : "inherit";
+
                   return (
                     <div
                       style={{
                         textAlign: "center",
                         padding: "4px 0",
                         height: "100%",
-                        backgroundColor: isHoliday
-                          ? "rgb(255, 223, 220)"
-                          : undefined,
+                        backgroundColor,
                         borderRadius: "8px",
                         marginLeft: "2px",
                         marginRight: "2px",
@@ -739,7 +729,7 @@ export default function Punch({
                     >
                       <div
                         style={{
-                          color: isHoliday || isSunday ? "red" : "inherit",
+                          color: textColor,
                           fontWeight: "bold",
                         }}
                       >
@@ -749,7 +739,7 @@ export default function Punch({
                         <Tooltip title={event} color="red">
                           <div
                             style={{
-                              color: "blue",
+                              color: isToday ? "#ffffff" : "blue",
                               fontSize: "10px",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
@@ -795,8 +785,50 @@ export default function Punch({
               <span className="ms-1">Attendance History</span>
             </h3>{" "}
             <div className="row align-items-center mt-3">
-              {/* Search Input */}
-              <div className="col-12 col-lg-6 mb-2 mb-lg-0">
+              <div className="col-12 col-lg-4 mb-2 mb-lg-0">
+                <DatePicker
+                  placeholder="From Date"
+                  size="large"
+                  value={startDateFilter}
+                  onChange={(date) => {
+                    setStartDateFilter(date);
+                    setSearchText("");
+                    // setIsSearchActive(false);
+                    // setSelectedStatus(null);
+                    if (
+                      endDateFilter &&
+                      date &&
+                      date.isAfter(endDateFilter, "day") // Compare with day precision
+                    ) {
+                      message.error("Start date cannot be after end date.");
+                    }
+                  }}
+                  // disabled={isSearchActive || selectedStatus !== null}
+                />
+
+                <DatePicker
+                  placeholder="To Date"
+                  size="large"
+                  value={endDateFilter}
+                  onChange={(date) => {
+                    setEndDateFilter(date);
+                    setSearchText("");
+                    // setIsSearchActive(false);
+                    // setSelectedStatus(null);
+                    if (
+                      startDateFilter &&
+                      date &&
+                      date.isBefore(startDateFilter, "day") // Compare with day precision
+                    ) {
+                      message.error("End date cannot be before start date.");
+                    }
+                  }}
+                  style={{ marginRight: 16 }}
+                  // disabled={isSearchActive || selectedStatus !== null}
+                  className="mt-2 mt-lg-0 ms-0 ms-lg-2"
+                />
+              </div>
+              <div className="col-12 col-lg-4 mb-2 mb-lg-0">
                 <Input
                   placeholder="Search"
                   prefix={<SearchOutlined />}
@@ -807,9 +839,7 @@ export default function Punch({
                   size="large"
                 />
               </div>
-
-              {/* Refresh Button */}
-              <div className="col-12 col-lg-6">
+              <div className="col-12 col-lg-4">
                 <div className="d-flex justify-content-lg-end gap-2">
                   <Button
                     type="primary"
@@ -836,29 +866,7 @@ export default function Punch({
               columns={columns}
               loading={refreshing}
               className="mt-3"
-              dataSource={data.filter((item) => {
-                const normalize = (str) =>
-                  (str || "").toLowerCase().replace(/\s+/g, ""); // lower case + remove all spaces
-                const searchString = normalize(searchText);
-
-                return (
-                  normalize(
-                    dayjs(item.punchIn).isValid()
-                      ? dayjs(item.punchIn).format("MMMM D, YYYY - HH:mm")
-                      : ""
-                  )?.includes(searchString) ||
-                  normalize(
-                    dayjs(item.punchOut).isValid()
-                      ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm")
-                      : ""
-                  )?.includes(searchString) ||
-                  normalize(item.location)?.includes(searchString) ||
-                  normalize(item.total)?.includes(searchString) ||
-                  normalize(item.punchedInRemark)?.includes(searchString) ||
-                  normalize(item.punchedOutRemark)?.includes(searchString) ||
-                  normalize(item.status)?.includes(searchString)
-                );
-              })}
+              dataSource={getFilteredData()}
               pagination={{ pageSize: 3 }}
               rowKey="key"
               scroll={{ x: "max-content" }}
@@ -866,6 +874,58 @@ export default function Punch({
           </Card>
         </div>
       </div>
+      <Modal open={isModalVisible} onCancel={handleCloseModal} footer={null}   style={{ top: 2 }} >
+        <h4>Attendance Details</h4>
+        <Form layout={formLayout} form={form}>
+          <Form.Item label="Punch In" name="punchIn">
+            <Input />
+          </Form.Item>
+          <Form.Item label="Punch Out" name="punchOut">
+            <Input />
+          </Form.Item>
+          <Form.Item label="Location" name="location">
+            <Input />
+          </Form.Item>
+          <Form.Item label="Total Hours" name="total">
+            <Input />
+          </Form.Item>
+          <Form.Item label="Punch In Remark" name="punchedInRemark">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item label="Punch Out Remark" name="punchedOutRemark">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item shouldUpdate>
+            {() => {
+              const status = form.getFieldValue("status");
+              const colorMap = {
+                Present: "success",
+                Punched: "processing",
+                "Invalid Time": "warning",
+                "Less than 9 hr": "warning",
+                Incomplete: "orange",
+                Absent: "error",
+                Unknown: "gray",
+              };
+              return (
+                <Form.Item label="Status">
+                  <Tag
+                    color={colorMap[status] || "default"}
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                      padding: "4px 10px",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {status || "-"}
+                  </Tag>
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

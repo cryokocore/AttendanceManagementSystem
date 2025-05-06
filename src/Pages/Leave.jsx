@@ -104,6 +104,7 @@ export default function Leave({
   const [tableLoading, setTableLoading] = useState(false);
   const [exportDisable, setExportDisable] = useState(false);
   const [leaveDuration, setLeaveDuration] = useState(null);
+  const [formError, setFormError] = useState(null);
   const [leaveBalances, setLeaveBalances] = useState({
     totalAvailable: 0,
     totalTaken: 0,
@@ -120,10 +121,18 @@ export default function Leave({
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [startDateFilter, setStartDateFilter] = useState(null);
   const [endDateFilter, setEndDateFilter] = useState(null);
+  const [selectedDates, setSelectedDates] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
+
   const handleView = (record) => {
     setSelectedRecord(record);
     setIsModalVisible(true);
   };
+  useEffect(() => {
+    if (formError) {
+      message.error(formError, 5);
+    }
+  }, [formError]);
   useEffect(() => {
     if (selectedRecord) {
       form.setFieldsValue({
@@ -149,7 +158,7 @@ export default function Leave({
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -166,7 +175,7 @@ export default function Leave({
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=leaveRequests&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=leaveRequests&employeeId=${employeeId}`
       );
       const data = await response.json();
       console.log("Leave request:", data);
@@ -193,13 +202,14 @@ export default function Leave({
     setRefreshing(true);
     await fetchLeaveBalance();
     setRefreshing(false);
-    message.success("Table updated successfully");
+    message.success("Showing updated leave summary data");
   };
 
   const handleTableRefresh = async () => {
     setTableRefresh(true);
     await fetchLeaveRequests();
     setTableRefresh(false);
+    message.success("Leave request table updated");
   };
 
   const exportToExcel = () => {
@@ -424,7 +434,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -496,6 +506,37 @@ export default function Leave({
 
     return totalLeave;
   };
+
+  useEffect(() => {
+    if (selectedDates && selectedDates.length === 2 && selectedType) {
+      const [startDate, endDate] = selectedDates;
+      const duration = calculateLeaveDuration(startDate, endDate);
+  
+      let available = null;
+      if (selectedType === "Personal/sick leave") {
+        available = leaveBalances.personalAvailable;
+      } else if (selectedType === "Earned leave") {
+        available = leaveBalances.earnedAvailable;
+      }
+  
+      if (
+        (selectedType === "Personal/sick leave" || selectedType === "Earned leave") &&
+        available !== null &&
+        duration > available
+      ) {
+        setFormError(
+          // `You have only ${available} day(s) available for ${selectedType}, but you requested ${duration} day(s).`
+
+          `Leave Duration exceeds ${selectedType} balance`
+        );
+      } else {
+        setFormError(null);
+      }
+  
+      setLeaveDuration(duration);
+    }
+  }, [selectedDates, selectedType]);
+  
 
   const normalize = (text) => String(text).toLowerCase().replace(/\s+/g, "");
 
@@ -595,7 +636,7 @@ export default function Leave({
       ellipsis: true,
       render: (text) => (
         // <Tooltip title={text}>
-          <span>{text}</span>
+        <span>{text}</span>
         // </Tooltip>
       ),
     },
@@ -611,7 +652,7 @@ export default function Leave({
           : "-";
         return (
           // <Tooltip title={formatted}>
-            <span>{formatted}</span>
+          <span>{formatted}</span>
           // </Tooltip>
         );
       },
@@ -638,7 +679,7 @@ export default function Leave({
       dataIndex: "reason",
       width: 300,
       ellipsis: true,
-      render: (text) =>
+      render: (text) => (
         // <Tooltip
         //   title={
         //     <div
@@ -667,7 +708,8 @@ export default function Leave({
         // </Tooltip>
 
         <span>{text}</span>
-      },
+      ),
+    },
     {
       title: "Leave Duration",
       dataIndex: "leaveDuration",
@@ -675,7 +717,7 @@ export default function Leave({
       ellipsis: true,
       render: (text) => (
         // <Tooltip title={text}>
-          <span>{text}</span>
+        <span>{text}</span>
         // </Tooltip>
       ),
     },
@@ -703,18 +745,18 @@ export default function Leave({
 
         return (
           // <Tooltip title={text}>
-            <Tag
-              color={color}
-              icon={icon}
-              style={{
-                textTransform: "capitalize",
-                fontSize: "16px",
-                padding: "4px 12px",
-                height: "auto",
-              }}
-            >
-              {text}
-            </Tag>
+          <Tag
+            color={color}
+            icon={icon}
+            style={{
+              textTransform: "capitalize",
+              fontSize: "16px",
+              padding: "4px 12px",
+              height: "auto",
+            }}
+          >
+            {text}
+          </Tag>
           // </Tooltip>
         );
       },
@@ -779,7 +821,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec",
+        "https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec",
         {
           method: "POST",
           headers: {
@@ -915,7 +957,11 @@ export default function Leave({
                       },
                     ]}
                   >
-                    <Select size="large" placeholder="Select leave type">
+                    <Select
+                      size="large"
+                      placeholder="Select leave type"
+                      onChange={(value) => setSelectedType(value)} // track change
+                    >
                       <Option
                         value="Personal/sick leave"
                         disabled={leaveBalances.personalAvailable === 0}
@@ -957,16 +1003,7 @@ export default function Leave({
                       size="large"
                       style={{ width: "100%" }}
                       onChange={(dates) => {
-                        if (dates && dates.length === 2) {
-                          const [startDate, endDate] = dates;
-                          const duration = calculateLeaveDuration(
-                            startDate,
-                            endDate
-                          );
-                          setLeaveDuration(duration);
-                        } else {
-                          setLeaveDuration(null);
-                        }
+                        setSelectedDates(dates);
                       }}
                     />
                   </Form.Item>
@@ -1009,7 +1046,7 @@ export default function Leave({
                     size="large"
                     className="mt-2"
                     onClick={handleSubmitLeave}
-                    disabled={loading}
+                    disabled={loading || !!formError}
                     loading={loading}
                   >
                     {loading
@@ -1035,20 +1072,32 @@ export default function Leave({
                   fullscreen={false}
                   value={selectedDate}
                   onSelect={(value) => setSelectedDate(value)}
-                  className="rounded-3 mt-3 p-lg-2"
-                  dateFullCellRender={(date) => {
+                  className="rounded-3 mt-2 p-lg-2"
+                  fullCellRender={(date) => {
                     const event = getHolidayEvent(date);
                     const isHoliday = !!event;
                     const isSunday = date.day() === 0;
+                    const isToday = date.isSame(dayjs(), "day");
+
+                    const backgroundColor = isToday
+                      ? "#cce5ff"
+                      : isHoliday
+                      ? "rgb(255, 223, 220)"
+                      : undefined;
+
+                    const textColor = isToday
+                      ? "blue"
+                      : isHoliday || isSunday
+                      ? "red"
+                      : "inherit";
+
                     return (
                       <div
                         style={{
                           textAlign: "center",
                           padding: "4px 0",
                           height: "100%",
-                          backgroundColor: isHoliday
-                            ? "rgb(255, 223, 220)"
-                            : undefined,
+                          backgroundColor,
                           borderRadius: "8px",
                           marginLeft: "2px",
                           marginRight: "2px",
@@ -1056,7 +1105,7 @@ export default function Leave({
                       >
                         <div
                           style={{
-                            color: isHoliday || isSunday ? "red" : "inherit",
+                            color: textColor,
                             fontWeight: "bold",
                           }}
                         >
@@ -1066,7 +1115,7 @@ export default function Leave({
                           <Tooltip title={event} color="red">
                             <div
                               style={{
-                                color: "blue",
+                                color: isToday ? "#ffffff" : "blue",
                                 fontSize: "10px",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",

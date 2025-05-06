@@ -38,6 +38,10 @@ import {
   faUser,
   faCalendarMinus,
   faWallet,
+  faCircleExclamation,
+  faCircleMinus,
+  faQuestionCircle,
+  faGaugeSimpleHigh
 } from "@fortawesome/free-solid-svg-icons";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
@@ -85,6 +89,7 @@ export default function Dashboard({
   employeeDesignation,
 }) {
   const [refreshing, setRefreshing] = useState(false);
+  const [attendanceRefreshing, setAttendanceRefreshing] = useState(false);
   const [leaveBalances, setLeaveBalances] = useState({
     totalAvailable: 0,
     totalTaken: 0,
@@ -97,13 +102,41 @@ export default function Dashboard({
   });
   const [data, setData] = useState([]);
 
+  const attendanceIcons = {
+    Present: (
+      <FontAwesomeIcon icon={faCalendarCheck} style={{ color: "#34e134bd" }} />
+    ),
+    Absent: (
+      <FontAwesomeIcon icon={faCalendarXmark} style={{ color: "#fe00008f" }} />
+    ),
+
+    Punched: <FontAwesomeIcon icon={faClock} style={{ color: "#0d6efdad" }} />,
+
+    "Invalid Time": (
+      <FontAwesomeIcon icon={faClock} style={{ color: "#faad14b5" }} />
+    ),
+    "Less than 9 hr": (
+      <FontAwesomeIcon
+        icon={faCircleExclamation}
+        style={{ color: "#fe00008f" }}
+      />
+    ),
+    Incomplete: (
+      <FontAwesomeIcon icon={faCircleMinus} style={{ color: "#faad14b5" }} />
+    ),
+    Unknown: (
+      <FontAwesomeIcon icon={faQuestionCircle} style={{ color: "gray" }} />
+    ),
+  };
+
   const defaultAttendanceStatuses = {
     Present: "-",
-    Punched: "-",
-    "Less than 9 hr": "-",
-    "Invalid Time": "-",
-    Incomplete: "-",
     Absent: "-",
+    Punched: "-",
+    "Invalid Time": "-",
+    "Less than 9 hr": "-",
+
+    Incomplete: "-",
     Unknown: "-",
   };
 
@@ -194,7 +227,7 @@ export default function Dashboard({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -212,7 +245,7 @@ export default function Dashboard({
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -233,7 +266,7 @@ export default function Dashboard({
   const fetchAttendance = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbyTd8zIqsbuXN0xdCgQiy2lTMBmc9MP_FZWz08_vyLv9k3r5l7JRSA5EoS_X7bd-Gx3/exec?employeeId=${employeeId}&action=attendance`
+        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?employeeId=${employeeId}&action=attendance`
       );
 
       const data = await res.json();
@@ -271,7 +304,14 @@ export default function Dashboard({
     setRefreshing(true);
     await fetchLeaveBalance();
     setRefreshing(false);
-    message.success("Table updated successfully");
+    message.success("Showing updated leave summary data");
+  };
+
+  const handleAttendanceRefresh = async () => {
+    setAttendanceRefreshing(true);
+    await fetchAttendance();
+    setAttendanceRefreshing(false);
+    message.success("Showing updated attendance summary data");
   };
   return (
     <div
@@ -341,20 +381,34 @@ export default function Dashboard({
         ))}
       </div>
 
-      <div className="row mt-lg-5">
-        <h3 className="mt-3">
-          <FontAwesomeIcon icon={faClock} />{" "}
-          <span className="ms-1">Attendance Summary</span>
-        </h3>
+      <div className="row mt-lg-3">
+        <div className="d-flex justify-content-between ">
+          <h3>
+            <FontAwesomeIcon icon={faClock} />{" "}
+            <span className="ms-1">Attendance Summary</span>
+          </h3>
+          <Button
+            color="primary"
+            variant="filled"
+            size="large"
+            loading={attendanceRefreshing}
+            icon={<ReloadOutlined />}
+            onClick={handleAttendanceRefresh}
+          >
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
+
         {Object.entries(attendanceSummary).map(([status, count]) => {
           const color =
             {
-              Present: "green",
-              Punched: "blue",
-              "Less than 9 hr": "red",
-              "Invalid Time": "orange",
-              Incomplete: "orange",
-              Absent: "red",
+              Present: "#34e134bd",
+              Punched: "#0d6efdad",
+              "Invalid Time": "#faad14b5",
+              "Less than 9 hr": "#fe00008f",
+
+              Incomplete: "#faad14b5",
+              Absent: "#fe00008f",
               Unknown: "gray",
             }[status] || "gray";
 
@@ -369,6 +423,7 @@ export default function Dashboard({
             >
               <Card
                 className="hover-leave-card"
+                loading={attendanceRefreshing}
                 style={{
                   borderTop: `4px solid ${color}`,
                   borderRadius: 4,
@@ -376,12 +431,17 @@ export default function Dashboard({
                 }}
               >
                 <div className="d-flex align-items-center justify-content-center flex-column">
-                  <Tag
-                    color={color}
-                    style={{ fontSize: 16, padding: "5px 10px" }}
-                  >
+                  <div style={{ fontSize: 30 }}>
+                    {attendanceIcons[status] || (
+                      <FontAwesomeIcon
+                        icon={faQuestionCircle}
+                        style={{ color: "gray" }}
+                      />
+                    )}
+                  </div>
+                  <div color={color} style={{ fontSize: 16 }}>
                     {status}
-                  </Tag>
+                  </div>
                   <Statistic
                     value={count}
                     valueStyle={{
