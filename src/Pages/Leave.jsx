@@ -133,6 +133,7 @@ export default function Leave({
       message.error(formError, 5);
     }
   }, [formError]);
+
   useEffect(() => {
     if (selectedRecord) {
       form.setFieldsValue({
@@ -141,9 +142,12 @@ export default function Leave({
           ? selectedRecord.dateRange.split(",").map((d) => dayjs(d.trim()))
           : [],
         reason: selectedRecord.reason,
+        status: selectedRecord.status,
+        reasonForRejection: selectedRecord.reasonForRejection || "-",
       });
       setLeaveDuration(selectedRecord.leaveDuration);
     }
+    console.log(selectedRecord);
   }, [selectedRecord, form]);
 
   const handleCloseModal = () => {
@@ -175,7 +179,7 @@ export default function Leave({
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=leaveRequests&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=leaveRequests&employeeId=${employeeId}`
       );
       const data = await response.json();
       console.log("Leave request:", data);
@@ -210,6 +214,18 @@ export default function Leave({
     await fetchLeaveRequests();
     setTableRefresh(false);
     message.success("Leave request table updated");
+  };
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Approved":
+        return "success";
+      case "Pending":
+        return "warning";
+      case "Denied":
+        return "error";
+      default:
+        return "primary";
+    }
   };
 
   const exportToExcel = () => {
@@ -248,7 +264,8 @@ export default function Leave({
         item.leaveType,
         item.reason,
         item.duration,
-        item.status,
+        item.status,    
+        item.reasonForRejection, 
         fromDateStr,
         toDateStr,
       ];
@@ -434,7 +451,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -511,16 +528,17 @@ export default function Leave({
     if (selectedDates && selectedDates.length === 2 && selectedType) {
       const [startDate, endDate] = selectedDates;
       const duration = calculateLeaveDuration(startDate, endDate);
-  
+
       let available = null;
       if (selectedType === "Personal/sick leave") {
         available = leaveBalances.personalAvailable;
       } else if (selectedType === "Earned leave") {
         available = leaveBalances.earnedAvailable;
       }
-  
+
       if (
-        (selectedType === "Personal/sick leave" || selectedType === "Earned leave") &&
+        (selectedType === "Personal/sick leave" ||
+          selectedType === "Earned leave") &&
         available !== null &&
         duration > available
       ) {
@@ -532,11 +550,10 @@ export default function Leave({
       } else {
         setFormError(null);
       }
-  
+
       setLeaveDuration(duration);
     }
   }, [selectedDates, selectedType]);
-  
 
   const normalize = (text) => String(text).toLowerCase().replace(/\s+/g, "");
 
@@ -762,6 +779,15 @@ export default function Leave({
       },
     },
     {
+      title: "Reason for rejection",
+      dataIndex: "reasonForRejection",
+      width: 300,
+      ellipsis: true,
+      render: (text) => (
+        <span>{text?.trim() ? text : "-"}</span>
+      ),
+    },
+    {
       title: "Action",
       key: "action",
       fixed: "right",
@@ -821,7 +847,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec",
+        "https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec",
         {
           method: "POST",
           headers: {
@@ -1254,26 +1280,25 @@ export default function Leave({
               open={isModalVisible}
               onCancel={handleCloseModal}
               footer={null}
+              style={{ top: 2 }}
             >
               <h4>Leave Request Details</h4>
               <Form layout={formLayout} form={form}>
                 <Form.Item
                   label="Leave Type"
                   name="leaveType"
-                  rules={[
-                    { required: true, message: "Please select leave type" },
-                  ]}
+               
                 >
                   <Select size="large" placeholder="Select leave type">
                     <Option
                       value="Personal/sick leave"
-                      disabled={leaveBalances.personalAvailable === 0}
-                    >
+                      disabled={leaveBalances.personalAvailable <= 0}
+                      >
                       Personal/sick leave
                     </Option>
                     <Option
                       value="Earned leave"
-                      disabled={leaveBalances.earnedAvailable === 0}
+                      disabled={leaveBalances.earnedAvailable <= 0}
                     >
                       Earned leave
                     </Option>
@@ -1281,13 +1306,10 @@ export default function Leave({
                     <Option value="Compoff leave">Compoff leave</Option>
                   </Select>
                 </Form.Item>
-
                 <Form.Item
                   label="Date Range"
                   name="dateRange"
-                  rules={[
-                    { required: true, message: "Please select date range" },
-                  ]}
+                 
                 >
                   <RangePicker
                     showTime
@@ -1307,20 +1329,13 @@ export default function Leave({
                     }}
                   />
                 </Form.Item>
-
                 <Form.Item label="Total No. of Days">
-                  <Input size="large" value={leaveDuration} disabled />
+                  <Input size="large" value={leaveDuration} />
                 </Form.Item>
-
                 <Form.Item
                   label="Reason for leave"
                   name="reason"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please enter the reason for leave",
-                    },
-                  ]}
+             
                 >
                   <TextArea
                     rows={5}
@@ -1331,6 +1346,26 @@ export default function Leave({
                         : "Enter the reason for leave"
                     }
                   />
+                </Form.Item>
+                <Form.Item label="Status">
+                  <Tag
+                    color={getStatusColor(form.getFieldValue("status"))}
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "16px",
+                      padding: "4px 10px",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {form.getFieldValue("status") || "N/A"}
+                  </Tag>
+                </Form.Item>
+                <Form.Item
+                  label="Reason for rejection"
+                  name="reasonForRejection"
+               
+                >
+                  <Input />
                 </Form.Item>
               </Form>
             </Modal>
