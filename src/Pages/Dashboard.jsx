@@ -227,7 +227,7 @@ export default function Dashboard({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -245,7 +245,7 @@ export default function Dashboard({
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -266,7 +266,7 @@ export default function Dashboard({
   const fetchAttendance = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?employeeId=${employeeId}&action=attendance`
+        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?employeeId=${employeeId}&action=attendance`
       );
 
       const data = await res.json();

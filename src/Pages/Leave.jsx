@@ -162,7 +162,7 @@ export default function Leave({
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyJqDtmxw_5c4Nn5pZOMuhn45BJluImtSa46JE-YJFaAj2qp45tSnZGSQFeN04MRqI/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -179,7 +179,7 @@ export default function Leave({
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=leaveRequests&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveRequests&employeeId=${employeeId}`
       );
       const data = await response.json();
       console.log("Leave request:", data);
@@ -451,7 +451,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -847,7 +847,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwdQY2gSFk-A1lhQDHzomrBekDS_lvu535RU0rcWHIzVwRPKcSvXG5CYVbXyxze3VU0/exec",
+        "https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec",
         {
           method: "POST",
           headers: {
@@ -990,14 +990,14 @@ export default function Leave({
                     >
                       <Option
                         value="Personal/sick leave"
-                        disabled={leaveBalances.personalAvailable === 0}
+                        disabled={leaveBalances.personalAvailable <= 0}
                       >
                         Personal/sick leave
                       </Option>
 
                       <Option
                         value="Earned leave"
-                        disabled={leaveBalances.earnedAvailable === 0}
+                        disabled={leaveBalances.earnedAvailable <= 0}
                       >
                         Earned leave
                       </Option>
