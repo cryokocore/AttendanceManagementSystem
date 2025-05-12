@@ -70,3 +70,32 @@
   .hover-leave-card:hover {
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
   }
+
+  .card-faded {
+  opacity: 0.2;
+  filter: grayscale(0.5);
+}
+
+.action-button {
+  transition: all 0.3s ease;
+}
+
+.approve-button:hover {
+  background-color: #389e0d !important;
+  border-color: #389e0d !important;
+}
+
+.deny-button:hover {
+  background-color: #cf1322 !important;
+  border-color: #cf1322 !important;
+}
+
+.view-button:hover {
+  background-color: #096dd9 !important;
+  border-color: #096dd9 !important;
+}
+
+.edit-button:hover {
+  background-color: #d48806 !important;
+  border-color: #d48806 !important;
+}

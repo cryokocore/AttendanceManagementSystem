@@ -12,8 +12,9 @@ import {
   Col,
   Row,
   DatePicker,
-  Select
+  Select,
 } from "antd";
+import { saveAs } from "file-saver";
 import {
   CheckOutlined,
   CloseOutlined,
@@ -25,16 +26,16 @@ import {
   SearchOutlined,
   ReloadOutlined,
   ArrowDownOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as XLSX from "xlsx-js-style";
-import { faTableList } from "@fortawesome/free-solid-svg-icons";
+import { faTableList, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(timezone);
@@ -60,6 +61,7 @@ export default function AdminDashboard() {
   const [form] = Form.useForm();
   const [employeeOptions, setEmployeeOptions] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
 
   useEffect(() => {
     fetchLeaveRequests();
@@ -87,11 +89,28 @@ export default function AdminDashboard() {
     setSearchText(e.target.value.toLowerCase());
   };
 
+  // const handleTableRefresh = async () => {
+  //   setTableRefresh(true);
+  //   await fetchLeaveRequests();
+  //   setTableRefresh(false);
+  //   message.success("Leave request table updated");
+  // };
   const handleTableRefresh = async () => {
+    setSearchText("");
+    setStartDateFilter(null);
+    setEndDateFilter(null);
+    setSelectedEmployeeId(null);
+    setSelectedStatus(null); // <-- Reset status filter too
     setTableRefresh(true);
+
     await fetchLeaveRequests();
+
     setTableRefresh(false);
     message.success("Leave request table updated");
+  };
+
+  const getCardClass = (status) => {
+    return selectedStatus && selectedStatus !== status ? "card-faded" : "";
   };
 
   const filteredRequests = leaveRequests.filter((request) => {
@@ -100,18 +119,23 @@ export default function AdminDashboard() {
       Object.values(request).some((val) =>
         String(val).toLowerCase().includes(searchText)
       );
-  
+
     const matchesEmployee =
       !selectedEmployeeId || request.employeeId === selectedEmployeeId;
-  
+
     const requestDate = dayjs(request.dateRange?.split(",")[0]?.trim());
     const matchesDateRange =
       (!startDateFilter || requestDate.isSameOrAfter(startDateFilter, "day")) &&
       (!endDateFilter || requestDate.isSameOrBefore(endDateFilter, "day"));
-  
-    return matchesSearch && matchesEmployee && matchesDateRange;
+
+    const matchesStatus =
+      !selectedStatus ||
+      request.status?.toLowerCase() === selectedStatus?.toLowerCase();
+
+    return (
+      matchesSearch && matchesEmployee && matchesDateRange && matchesStatus
+    );
   });
-  
 
   const fetchLeaveRequests = async () => {
     try {
@@ -191,6 +215,113 @@ export default function AdminDashboard() {
   const openViewModal = (record) => {
     setViewModal({ visible: true, record });
     setRejectionReason(record.reasonForRejection || "-");
+  };
+
+  const totalCount = leaveRequests.length;
+  const pendingCount = leaveRequests.filter(
+    (req) => req.status?.toLowerCase() === "pending"
+  ).length;
+  const approvedCount = leaveRequests.filter(
+    (req) => req.status?.toLowerCase() === "approved"
+  ).length;
+  const deniedCount = leaveRequests.filter(
+    (req) => req.status?.toLowerCase() === "denied"
+  ).length;
+
+  const exportToExcel = () => {
+    if (!filteredRequests.length) {
+      message.warning("No data to export.");
+      return;
+    }
+
+    const exportData = filteredRequests.map((item) => {
+      const [fromRaw, toRaw] = (item.dateRange || "").split(",");
+      const fromDate = dayjs(fromRaw).isValid()
+        ? dayjs(fromRaw).format("MMM D, YYYY HH:mm:ss")
+        : "-";
+      const toDate = dayjs(toRaw).isValid()
+        ? dayjs(toRaw).format("MMM D, YYYY HH:mm:ss")
+        : "-";
+
+      return {
+        "Employee ID": item.employeeId || "-",
+        "Employee Name": item.employeeName || "-",
+        Designation: item.designation || "-",
+        Location: item.location || "-",
+        "Leave Type": item.leaveType || "-",
+        "From Date": fromDate,
+        "To Date": toDate,
+        Reason: item.reason || "-",
+        "Leave Duration": item.leaveDuration || "-",
+        Status: item.status || "-",
+        "Rejection Reason": item.reasonForRejection || "-",
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Apply styling
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font: {
+            name: "Arial",
+            sz: R === 0 ? 12 : 10,
+            bold: R === 0,
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+          fill:
+            R === 0
+              ? { fgColor: { rgb: "FFFFAA" } } // Light yellow for headers
+              : undefined,
+        };
+      }
+    }
+
+    worksheet["!cols"] = [
+      { wch: 15 }, // Employee ID
+      { wch: 20 }, // Employee Name
+      { wch: 20 }, // Designation
+      { wch: 15 }, // Location
+      { wch: 15 }, // Leave Type
+      { wch: 22 }, // From Date
+      { wch: 22 }, // To Date
+      { wch: 40 }, // Reason
+      { wch: 18 }, // Leave Duration
+      { wch: 15 }, // Status
+      { wch: 40 }, // Rejection Reason
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leave Report");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+
+    const fileName = `Employee_Leave_Request_Report_${dayjs().format(
+      "YYYY-MM-DD_HH-mm"
+    )}.xlsx`;
+    saveAs(blob, fileName);
   };
 
   const columns = [
@@ -283,6 +414,7 @@ export default function AdminDashboard() {
                     backgroundColor: "#61c41abd",
                     borderColor: "#61c41abd",
                   }} // success
+                  className="action-button approve-button"
                   icon={<CheckOutlined />}
                   onClick={() => handleAction(record, "approve")}
                 />
@@ -292,6 +424,7 @@ export default function AdminDashboard() {
                     backgroundColor: "#ff4d4fc4",
                     borderColor: "#ff4d4fc4",
                   }}
+                  className="action-button deny-button"
                   icon={<CloseOutlined />}
                   onClick={() => handleAction(record, "deny")}
                 />
@@ -301,6 +434,7 @@ export default function AdminDashboard() {
               type="primary"
               style={{ backgroundColor: "#5bacf6", borderColor: "#5bacf6" }} // info
               icon={<EyeOutlined />}
+              className="action-button view-button"
               onClick={() => openViewModal(record)}
             />
             {!isPending && (
@@ -311,6 +445,7 @@ export default function AdminDashboard() {
                   borderColor: "#faad14bd",
                 }} // warning
                 icon={<EditOutlined />}
+                className="action-button edit-button"
                 onClick={() => openEditModal(record)}
               />
             )}
@@ -356,23 +491,112 @@ export default function AdminDashboard() {
       <h2 className="text-center m-0 p-0">
         <span className="ms-1 text-center">Admin Dashboard</span>
       </h2>
-     
+
       <p className="text-center m-0 p-0" style={{ fontSize: "14px" }}>
         Approve or deny employee leave request
       </p>
+      <div className="row mt-4">
+        <div className="col-12 col-md-3 mb-3">
+          <Card
+            bordered={false}
+            hoverable
+            onClick={() => setSelectedStatus(null)}
+            className={getCardClass()}
+            style={{
+              background: "#e6f7ff",
+              borderLeft: "6px solid #1890ff",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <h5 className="text-primary m-0">
+              <FontAwesomeIcon icon={faTableList} className="me-2" />
+              Total Requests
+            </h5>
+            <h2 className="text-dark">{totalCount}</h2>
+          </Card>
+        </div>
+
+        <div className="col-12 col-md-3 mb-3">
+          <Card
+            bordered={false}
+            hoverable
+            onClick={() => setSelectedStatus("pending")}
+            className={getCardClass("pending")}
+            style={{
+              background: "#fffbe6",
+              borderLeft: "6px solid #faad14",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <h5 className="text-warning m-0">
+              <ClockCircleOutlined className="me-2" />
+              Pending
+            </h5>
+            <h2 className="text-dark">{pendingCount}</h2>
+          </Card>
+        </div>
+
+        <div className="col-12 col-md-3 mb-3">
+          <Card
+            bordered={false}
+            hoverable
+            onClick={() => setSelectedStatus("approved")}
+            className={getCardClass("approved")}
+            style={{
+              background: "#f6ffed",
+              borderLeft: "6px solid #52c41a",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <h5 className="text-success m-0">
+              <CheckCircleOutlined className="me-2" />
+              Approved
+            </h5>
+            <h2 className="text-dark">{approvedCount}</h2>
+          </Card>
+        </div>
+
+        <div className="col-12 col-md-3 mb-3">
+          <Card
+            bordered={false}
+            hoverable
+            onClick={() => setSelectedStatus("denied")}
+            className={getCardClass("denied")}
+            style={{
+              background: "#fff1f0",
+              borderLeft: "6px solid #ff4d4f",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <h5 className="text-danger m-0">
+              <CloseCircleOutlined className="me-2" />
+              Denied
+            </h5>
+            <h2 className="text-dark">{deniedCount}</h2>
+          </Card>
+        </div>
+      </div>
+
       <div className="row">
-        <div className="col-12 mt-5">
+        <div className="col-12 mt-2">
           <Card
             bordered={false}
             className="shadow hover-card"
             style={{ borderRadius: 16 }}
-          > <div className="row"><div className="col-12 col-lg-6">
-            <h3>
-              <FontAwesomeIcon icon={faTableList} />
-              <span className="ms-1">Employee Leave Requests</span>
-            </h3>
-            </div>
-            <div className="col-12 col-lg-6 mt-lg-2">
+          >
+            {" "}
+            <div className="row">
+              <div className="col-12 col-lg-6">
+                <h3>
+                  <FontAwesomeIcon icon={faTableList} />
+                  <span className="ms-1">Employee Leave Requests</span>
+                </h3>
+              </div>
+              <div className="col-12 col-lg-6 mt-lg-2 d-none d-lg-block">
                 <div className="d-flex justify-content-lg-end gap-2">
                   <Button
                     type="primary"
@@ -388,7 +612,7 @@ export default function AdminDashboard() {
                     color="danger"
                     size="large"
                     icon={<ArrowDownOutlined />}
-                    // onClick={exportToExcel}
+                    onClick={exportToExcel}
                     // disabled={exportDisable}
                   >
                     Export
@@ -397,7 +621,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="row align-items-center mt-3">
-              <div className="col-12 col-lg-4 mb-2 mb-lg-0">
+              <div className="col-12 col-lg-5 col-xl-4 mb-2 mb-lg-0">
                 <DatePicker
                   placeholder="From Date"
                   size="large"
@@ -405,7 +629,7 @@ export default function AdminDashboard() {
                   onChange={(date) => {
                     setStartDateFilter(date);
                     setSearchText("");
-                   
+
                     if (
                       endDateFilter &&
                       date &&
@@ -436,11 +660,11 @@ export default function AdminDashboard() {
                   }}
                   style={{ marginRight: 16 }}
                   // disabled={isSearchActive || selectedStatus !== null}
-                  className="mt-2 mt-lg-0 ms-0 ms-lg-2"
+                  className="mt-2 mt-lg-0 ms-md-2 ms-lg-2"
                 />
               </div>
 
-              <div className="col-12 col-lg-4 mb-2 mb-lg-0 ">
+              <div className="col-12 col-lg-3 col-xl-4 mb-2 mb-lg-0 ">
                 <Input
                   placeholder="Search"
                   prefix={<SearchOutlined />}
@@ -452,27 +676,27 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="col-12 col-lg-4 mb-2 mb-lg-0">
-
-              <Select
-                showSearch
-                allowClear
-                placeholder="Filter by Employee"
-                optionFilterProp="children"
-                size="large"
-                value={selectedEmployeeId}
-                onChange={(value) => setSelectedEmployeeId(value)}
-                filterOption={(input, option) =>
-                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
-                  0
-                }
-                style={{ width: "100%" }}
-              >
-                {employeeOptions.map((emp) => (
-                  <Select.Option key={emp.employeeId} value={emp.employeeId}>
-                    {`${emp.employeeName} - ${emp.employeeId} - ${emp.designation}`}
-                  </Select.Option>
-                ))}
-              </Select>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Filter by Employee"
+                  optionFilterProp="children"
+                  size="large"
+                  value={selectedEmployeeId}
+                  onChange={(value) => setSelectedEmployeeId(value)}
+                  filterOption={(input, option) =>
+                    option.children
+                      .toLowerCase()
+                      .indexOf(input.toLowerCase()) >= 0
+                  }
+                  style={{ width: "100%" }}
+                >
+                  {employeeOptions.map((emp) => (
+                    <Select.Option key={emp.employeeId} value={emp.employeeId}>
+                      {`${emp.employeeName} - ${emp.employeeId} - ${emp.designation}`}
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
 
               {/* Refresh Button */}
@@ -499,6 +723,27 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </div> */}
+              <div className="d-flex justify-content-lg-end gap-2 d-lg-none d-sm-block">
+                <Button
+                  type="primary"
+                  size="large"
+                  loading={tableRefresh}
+                  icon={<ReloadOutlined />}
+                  onClick={handleTableRefresh}
+                >
+                  {tableRefresh ? "Refreshing..." : "Refresh"}
+                </Button>
+                <Button
+                  variant="solid"
+                  color="danger"
+                  size="large"
+                  icon={<ArrowDownOutlined />}
+                  onClick={exportToExcel}
+                  // disabled={exportDisable}
+                >
+                  Export
+                </Button>
+              </div>
             </div>
             <Table
               columns={columns}
@@ -509,7 +754,6 @@ export default function AdminDashboard() {
               scroll={{ x: "max-content" }}
               className="mt-3"
             />
-
             {/* Deny Modal */}
             <Modal
               title="Enter reason for denial"
@@ -535,7 +779,6 @@ export default function AdminDashboard() {
                 placeholder="Reason for rejecting leave"
               />
             </Modal>
-
             {/* Edit Modal */}
             <Modal
               open={editModal.visible}
@@ -731,7 +974,6 @@ export default function AdminDashboard() {
                 </Form.Item>
               </Form>
             </Modal>
-
             {/*View Modal */}
             <Modal
               open={viewModal.visible}

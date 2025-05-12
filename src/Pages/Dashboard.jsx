@@ -146,82 +146,175 @@ export default function Dashboard({
 
   const [holidays, setHolidays] = useState([]);
 
+  // const leaveStats = [
+  //   {
+  //     title: "Total Leave Available",
+  //     value:
+  //       leaveBalances.totalAvailable != null
+  //         ? leaveBalances.totalAvailable
+  //         : "-",
+  //     icon: (
+  //       <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
+  //     ),
+  //     color: "#34e134bd",
+  //   },
+  //   {
+  //     title: "Total Leave Taken",
+  //     value: leaveBalances.totalTaken != null ? leaveBalances.totalTaken : "-",
+  //     icon: (
+  //       <FontAwesomeIcon
+  //         icon={faCalendarXmark}
+  //         style={{ color: "#fe00008f" }}
+  //       />
+  //     ),
+  //     color: "#fe00008f",
+  //   },
+  //   {
+  //     title: "Earned Leave Available",
+  //     value:
+  //       leaveBalances.earnedAvailable != null
+  //         ? leaveBalances.earnedAvailable
+  //         : "-",
+  //     icon: (
+  //       <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
+  //     ),
+  //     color: "#faad14b5",
+  //   },
+  //   {
+  //     title: "Personal/Sick Leave Available",
+  //     value:
+  //       leaveBalances.personalAvailable != null
+  //         ? leaveBalances.personalAvailable
+  //         : "-",
+  //     icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
+  //     color: "#0d6efdad",
+  //   },
+  //   {
+  //     title: "Personal/Sick Leave Taken",
+  //     value:
+  //       leaveBalances.personalTaken != null ? leaveBalances.personalTaken : "-",
+  //     icon: (
+  //       <FontAwesomeIcon icon={faCalendarMinus} style={{ color: "#b54dff" }} />
+  //     ),
+  //     color: "#b54dff",
+  //   },
+  //   {
+  //     title: "Unpaid Leave Taken",
+  //     value:
+  //       leaveBalances.unpaidTaken != null ? leaveBalances.unpaidTaken : "-",
+  //     icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
+  //     color: "#008080b0",
+  //   },
+  //   {
+  //     title: "Earned Leave Taken",
+  //     value:
+  //       leaveBalances.earnedTaken != null ? leaveBalances.earnedTaken : "-",
+  //     icon: <FontAwesomeIcon icon={faCalendar} style={{ color: "#91caff" }} />,
+  //     color: "#91caff",
+  //   },
+  //   {
+  //     title: "Compoff Leave Taken",
+  //     value:
+  //       leaveBalances.compoffTaken != null ? leaveBalances.compoffTaken : "-",
+  //     icon: (
+  //       <FontAwesomeIcon icon={faCalendarWeek} style={{ color: "#fe00b2" }} />
+  //     ),
+  //     color: "#fe00b2",
+  //   },
+  // ];
+
   const leaveStats = [
-    {
-      title: "Total Leave Available",
-      value:
-        leaveBalances.totalAvailable != null
-          ? leaveBalances.totalAvailable
-          : "-",
-      icon: (
-        <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
+  {
+    title: "Total Leave Available",
+    value: leaveBalances.totalAvailable ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendarDays} />,
+    color: "#34e134", // main color
+    backgroundColor: "rgba(52, 225, 52, 0.1)", // light green
+  },
+  {
+    title: "Total Leave Taken",
+    value: leaveBalances.totalTaken ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendarXmark} />,
+    color: "#fe0000",
+    backgroundColor: "rgba(254, 0, 0, 0.1)",
+  },
+  {
+    title: "Earned Leave Available",
+    value: leaveBalances.earnedAvailable ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendarPlus} />,
+    color: "#faad14",
+    backgroundColor: "rgba(250, 173, 20, 0.1)",
+  },
+  {
+    title: "Personal/Sick Leave Available",
+    value: leaveBalances.personalAvailable ?? "-",
+    icon: <FontAwesomeIcon icon={faUser} />,
+    color: "#0d6efd",
+    backgroundColor: "rgba(13, 110, 253, 0.1)",
+  },
+  {
+    title: "Personal/Sick Leave Taken",
+    value: leaveBalances.personalTaken ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendarMinus} />,
+    color: "#b54dff",
+    backgroundColor: "rgba(181, 77, 255, 0.1)",
+  },
+  {
+    title: "Unpaid Leave Taken",
+    value: leaveBalances.unpaidTaken ?? "-",
+    icon: <FontAwesomeIcon icon={faWallet} />,
+    color: "#008080",
+    backgroundColor: "rgba(0, 128, 128, 0.1)",
+  },
+  {
+    title: "Earned Leave Taken",
+    value: leaveBalances.earnedTaken ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendar} />,
+    color: "#91caff",
+    backgroundColor: "rgba(145, 202, 255, 0.2)",
+  },
+  {
+    title: "Compoff Leave Taken",
+    value: leaveBalances.compoffTaken ?? "-",
+    icon: <FontAwesomeIcon icon={faCalendarWeek} />,
+    color: "#fe00b2",
+    backgroundColor: "rgba(254, 0, 178, 0.1)",
+  },
+];
+
+const attendanceStats = Object.entries(attendanceSummary).map(
+  ([status, count]) => {
+    const colorMap = {
+      Present: "#34e134",
+      Punched: "#0d6efd",
+      "Invalid Time": "#faad14",
+      "Less than 9 hr": "#fe0000",
+      Incomplete: "#faad14",
+      Absent: "#fe0000",
+      Unknown: "#888",
+    };
+
+    const bgMap = {
+      Present: "rgba(52, 225, 52, 0.1)",
+      Punched: "rgba(13, 110, 253, 0.1)",
+      "Invalid Time": "rgba(250, 173, 20, 0.1)",
+      "Less than 9 hr": "rgba(254, 0, 0, 0.1)",
+      Incomplete: "rgba(250, 173, 20, 0.1)",
+      Absent: "rgba(254, 0, 0, 0.1)",
+      Unknown: "rgba(136, 136, 136, 0.1)",
+    };
+
+    return {
+      title: status,
+      value: count,
+      icon: attendanceIcons[status] || (
+        <FontAwesomeIcon icon={faQuestionCircle} />
       ),
-      color: "#34e134bd",
-    },
-    {
-      title: "Total Leave Taken",
-      value: leaveBalances.totalTaken != null ? leaveBalances.totalTaken : "-",
-      icon: (
-        <FontAwesomeIcon
-          icon={faCalendarXmark}
-          style={{ color: "#fe00008f" }}
-        />
-      ),
-      color: "#fe00008f",
-    },
-    {
-      title: "Earned Leave Available",
-      value:
-        leaveBalances.earnedAvailable != null
-          ? leaveBalances.earnedAvailable
-          : "-",
-      icon: (
-        <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
-      ),
-      color: "#faad14b5",
-    },
-    {
-      title: "Personal/Sick Leave Available",
-      value:
-        leaveBalances.personalAvailable != null
-          ? leaveBalances.personalAvailable
-          : "-",
-      icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
-      color: "#0d6efdad",
-    },
-    {
-      title: "Personal/Sick Leave Taken",
-      value:
-        leaveBalances.personalTaken != null ? leaveBalances.personalTaken : "-",
-      icon: (
-        <FontAwesomeIcon icon={faCalendarMinus} style={{ color: "#b54dff" }} />
-      ),
-      color: "#b54dff",
-    },
-    {
-      title: "Unpaid Leave Taken",
-      value:
-        leaveBalances.unpaidTaken != null ? leaveBalances.unpaidTaken : "-",
-      icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
-      color: "#008080b0",
-    },
-    {
-      title: "Earned Leave Taken",
-      value:
-        leaveBalances.earnedTaken != null ? leaveBalances.earnedTaken : "-",
-      icon: <FontAwesomeIcon icon={faCalendar} style={{ color: "#91caff" }} />,
-      color: "#91caff",
-    },
-    {
-      title: "Compoff Leave Taken",
-      value:
-        leaveBalances.compoffTaken != null ? leaveBalances.compoffTaken : "-",
-      icon: (
-        <FontAwesomeIcon icon={faCalendarWeek} style={{ color: "#fe00b2" }} />
-      ),
-      color: "#fe00b2",
-    },
-  ];
+      color: colorMap[status] || "#888",
+      backgroundColor: bgMap[status] || "rgba(136, 136, 136, 0.1)",
+    };
+  }
+);
 
   useEffect(() => {
     const fetchHolidays = async () => {
@@ -340,45 +433,56 @@ export default function Dashboard({
             {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
-        {leaveStats.map((stat, index) => (
-          <Col
-            key={stat.title}
-            xs={24}
-            sm={12}
-            md={12}
-            lg={6}
-            className="mb-4 mt-3"
+     {leaveStats.map((stat) => (
+  <Col key={stat.title} xs={24} sm={12} md={12} lg={6} className="mb-4 mt-3">
+    <Card
+      hoverable
+      bordered={false}
+      loading={refreshing}
+      style={{
+        backgroundColor: `${stat.color}20`, // Light transparent background
+        borderLeft: `6px solid ${stat.color}`,
+        borderRadius: "12px",
+        height: "100%",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
+        transition: "all 0.3s ease-in-out",
+      }}
+    >
+      <div className="d-flex align-items-center">
+        <div
+          style={{
+            minWidth: 50,
+            minHeight: 50,
+            borderRadius: "50%",
+            backgroundColor: `${stat.color}33`, // slightly darker for icon bg
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 16,
+          }}
+        >
+          <div style={{ fontSize: 24, color: stat.color }}>{stat.icon}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
+            {stat.title}
+          </div>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: "bold",
+              color: stat.color,
+              marginTop: 4,
+            }}
           >
-            <Card
-              className=" hover-leave-card"
-              loading={refreshing}
-              style={{
-                borderTop: `4px solid ${stat.color}`,
-                borderLeft: "none",
-                borderRight: "none",
-                borderBottom: "none",
-                borderRadius: 4,
-                height: "100%",
-              }}
-            >
-              <div className="d-flex align-items-center justify-content-center flex-column">
-                <div style={{ fontSize: 30 }}>{stat.icon}</div>
-                <div>
-                  <div style={{ fontSize: 16 }}>{stat.title}</div>
-                  <Statistic
-                    value={stat.value}
-                    valueStyle={{
-                      fontSize: 20,
-                      fontWeight: "bold",
-                      color: stat.color,
-                      textAlign: "center",
-                    }}
-                  />
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
+            {stat.value}
+          </div>
+        </div>
+      </div>
+    </Card>
+  </Col>
+))}
+
       </div>
 
       <div className="row mt-lg-3">
@@ -399,7 +503,7 @@ export default function Dashboard({
           </Button>
         </div>
 
-        {Object.entries(attendanceSummary).map(([status, count]) => {
+        {/* {Object.entries(attendanceSummary).map(([status, count]) => {
           const color =
             {
               Present: "#34e134bd",
@@ -455,7 +559,57 @@ export default function Dashboard({
               </Card>
             </Col>
           );
-        })}
+        })} */}
+        {attendanceStats.map((stat) => (
+  <Col key={stat.title} xs={24} sm={12} md={8} lg={6} className="mb-4 mt-3">
+    <Card
+      hoverable
+      bordered={false}
+      loading={attendanceRefreshing}
+      style={{
+        backgroundColor: stat.backgroundColor,
+        borderLeft: `6px solid ${stat.color}`,
+        borderRadius: "12px",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
+        transition: "all 0.3s ease-in-out",
+        height: "100%",
+      }}
+    >
+      <div className="d-flex align-items-center">
+        <div
+          style={{
+            minWidth: 50,
+            minHeight: 50,
+            borderRadius: "50%",
+            backgroundColor: `${stat.color}33`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 16,
+          }}
+        >
+          <div style={{ fontSize: 24, color: stat.color }}>{stat.icon}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
+            {stat.title}
+          </div>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: "bold",
+              color: stat.color,
+              marginTop: 4,
+            }}
+          >
+            {stat.value}
+          </div>
+        </div>
+      </div>
+    </Card>
+  </Col>
+))}
+
       </div>
     </div>
   );
