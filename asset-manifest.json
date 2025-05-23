@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/AttendanceManagementSystem/static/css/main.17bf20d3.css",
-    "main.js": "/AttendanceManagementSystem/static/js/main.7187a4d3.js",
+    "main.js": "/AttendanceManagementSystem/static/js/main.3aeaa634.js",
     "static/js/453.225d8625.chunk.js": "/AttendanceManagementSystem/static/js/453.225d8625.chunk.js",
     "index.html": "/AttendanceManagementSystem/index.html",
     "main.17bf20d3.css.map": "/AttendanceManagementSystem/static/css/main.17bf20d3.css.map",
-    "main.7187a4d3.js.map": "/AttendanceManagementSystem/static/js/main.7187a4d3.js.map",
+    "main.3aeaa634.js.map": "/AttendanceManagementSystem/static/js/main.3aeaa634.js.map",
     "453.225d8625.chunk.js.map": "/AttendanceManagementSystem/static/js/453.225d8625.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.17bf20d3.css",
-    "static/js/main.7187a4d3.js"
+    "static/js/main.3aeaa634.js"
   ]
 }
