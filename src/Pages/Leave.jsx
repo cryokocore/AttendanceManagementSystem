@@ -391,6 +391,7 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
       ),
       color: "#34e134bd",
+      backgroundColor:"#35e1342e"
     },
     {
       title: "Total Leave Taken",
@@ -402,6 +403,7 @@ export default function Leave({
         />
       ),
       color: "#fe00008f",
+      backgroundColor:"#fe00001e"
     },
     {
       title: "Earned Leave Available",
@@ -410,12 +412,16 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
       ),
       color: "#faad14b5",
+            backgroundColor:"#faad141e"
+
     },
     {
       title: "Personal/Sick Leave Available",
       value: leaveBalances.personalAvailable || 0,
       icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
       color: "#0d6efdad",
+            backgroundColor:"#0d6efd26"
+
     },
     {
       title: "Personal/Sick Leave Taken",
@@ -424,18 +430,24 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarMinus} style={{ color: "#b54dff" }} />
       ),
       color: "#b54dff",
+            backgroundColor:"#b54dff29"
+
     },
     {
       title: "Unpaid Leave Taken",
       value: leaveBalances.unpaidTaken || 0,
       icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
       color: "#008080b0",
+            backgroundColor:"#00808021"
+
     },
     {
       title: "Earned Leave Taken",
       value: leaveBalances.earnedTaken || 0,
       icon: <FontAwesomeIcon icon={faCalendar} style={{ color: "#91caff" }} />,
       color: "#91caff",
+            backgroundColor:"#91caff52"
+
     },
     {
       title: "Compoff Leave Taken",
@@ -444,6 +456,8 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarWeek} style={{ color: "#fe00b2" }} />
       ),
       color: "#fe00b2",
+            backgroundColor:"#fe00b22b"
+
     },
   ];
 
@@ -629,23 +643,7 @@ export default function Leave({
   }, [searchText, startDateFilter, endDateFilter, filteredData]);
 
   const columns = [
-    // {
-    //   title: "Leave Submitted Date",
-    //   dataIndex: "timestamp",
-    //   width: 200,
-    //   ellipsis: true,
-    //   render: (text) => {
-    //     const formattedText = dayjs(text).isValid()
-    //       ? dayjs(text).format("MMMM D, YYYY - HH:mm:ss")
-    //       : "-";
-    //     return (
-    //       <Tooltip title={formattedText}>
-    //         <span>{formattedText}</span>
-    //       </Tooltip>
-    //     );
-    //   },
-    // },
-
+   
     {
       title: "Leave Type",
       dataIndex: "leaveType",
@@ -922,7 +920,7 @@ export default function Leave({
               className="mb-4 mt-3"
             >
               <Card
-                className=" hover-leave-card"
+                className="hover-leave-card"
                 loading={refreshing}
                 style={{
                   borderTop: `4px solid ${stat.color}`,
@@ -931,8 +929,16 @@ export default function Leave({
                   borderBottom: "none",
                   borderRadius: 4,
                   height: "100%",
+                
                 }}
+                  styles={{
+    body: {
+      backgroundColor: `${stat.backgroundColor}` || "white",
+      padding: "16px",
+    },
+  }}
               >
+                
                 <div className="d-flex align-items-center justify-content-center flex-column">
                   <div style={{ fontSize: 30 }}>{stat.icon}</div>
                   <div>
@@ -943,6 +949,7 @@ export default function Leave({
                         fontSize: 20,
                         fontWeight: "bold",
                         color: stat.color,
+
                         textAlign: "center",
                       }}
                     />
