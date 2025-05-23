@@ -390,7 +390,7 @@ export default function Leave({
       icon: (
         <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
       ),
-      color: "#34e134bd",
+      color: "#34e134",
       backgroundColor:"#35e1342e"
     },
     {
@@ -402,7 +402,7 @@ export default function Leave({
           style={{ color: "#fe00008f" }}
         />
       ),
-      color: "#fe00008f",
+      color: "#fe0000",
       backgroundColor:"#fe00001e"
     },
     {
@@ -411,7 +411,7 @@ export default function Leave({
       icon: (
         <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
       ),
-      color: "#faad14b5",
+      color: "#faad14",
             backgroundColor:"#faad141e"
 
     },
@@ -419,7 +419,7 @@ export default function Leave({
       title: "Personal/Sick Leave Available",
       value: leaveBalances.personalAvailable || 0,
       icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
-      color: "#0d6efdad",
+      color: "#0d6efd",
             backgroundColor:"#0d6efd26"
 
     },
@@ -437,7 +437,7 @@ export default function Leave({
       title: "Unpaid Leave Taken",
       value: leaveBalances.unpaidTaken || 0,
       icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
-      color: "#008080b0",
+      color: "#008080",
             backgroundColor:"#00808021"
 
     },
@@ -933,14 +933,26 @@ export default function Leave({
                 }}
                   styles={{
     body: {
-      backgroundColor: `${stat.backgroundColor}` || "white",
+      backgroundColor: `${stat.color}33` || "white",
       padding: "16px",
     },
   }}
               >
                 
                 <div className="d-flex align-items-center justify-content-center flex-column">
-                  <div style={{ fontSize: 30 }}>{stat.icon}</div>
+                   <div
+          style={{
+            minWidth: 50,
+            minHeight: 50,
+            borderRadius: "50%",
+            backgroundColor: `${stat.color}33`, // slightly darker for icon bg
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 16,
+          }}
+        >
+                  <div style={{ fontSize: 30 }}>{stat.icon}</div></div>
                   <div>
                     <div style={{ fontSize: 16 }}>{stat.title}</div>
                     <Statistic
