@@ -242,44 +242,130 @@ export default function Punch({
   }, []);
 
  
+  // const exportToExcel = () => {
+  //   const filteredData = getFilteredData(); 
+  
+  //   const exportData = filteredData.map((item) => ({
+  //     "Employee ID": employeeId,
+  //     "Employee Name": employeeName,
+  //     Designation: employeeDesignation,
+  //     Location: employeeLocation,
+  //     "Punch In": dayjs(item.punchIn).isValid()
+  //       ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
+  //       : "-",
+  //     "Punch Out": dayjs(item.punchOut).isValid()
+  //       ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
+  //       : "-",
+  //     "Total Hours": item.total,
+  //     "Punch In Remark": item.punchedInRemark,
+  //     "Punch Out Remark": item.punchedOutRemark,
+  //     Status: item.status,
+  //   }));
+  
+  //   const worksheet = XLSX.utils.json_to_sheet(exportData);
+  
+  //   // Style headers, set column widths (same as before)...
+  
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
+  
+  //   const excelBuffer = XLSX.write(workbook, {
+  //     bookType: "xlsx",
+  //     type: "array",
+  //   });
+  
+  //   const dataBlob = new Blob([excelBuffer], {
+  //     type: "application/octet-stream",
+  //   });
+  
+  //   saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance Report.xlsx`);
+  // };
+
+
   const exportToExcel = () => {
-    const filteredData = getFilteredData(); 
-  
-    const exportData = filteredData.map((item) => ({
-      "Employee ID": employeeId,
-      "Employee Name": employeeName,
-      Designation: employeeDesignation,
-      Location: employeeLocation,
-      "Punch In": dayjs(item.punchIn).isValid()
-        ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
-        : "-",
-      "Punch Out": dayjs(item.punchOut).isValid()
-        ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
-        : "-",
-      "Total Hours": item.total,
-      "Punch In Remark": item.punchedInRemark,
-      "Punch Out Remark": item.punchedOutRemark,
-      Status: item.status,
-    }));
-  
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-  
-    // Style headers, set column widths (same as before)...
-  
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
-  
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-  
-    const dataBlob = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
-  
-    saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance Report.xlsx`);
-  };
+  const filteredData = getFilteredData(); 
+
+  const exportData = filteredData.map((item) => ({
+    "Employee ID": employeeId,
+    "Employee Name": employeeName,
+    Designation: employeeDesignation,
+    Location: employeeLocation,
+    "Punch In": dayjs(item.punchIn).isValid()
+      ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
+      : "-",
+    "Punch Out": dayjs(item.punchOut).isValid()
+      ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
+      : "-",
+    "Total Hours": item.total,
+    "Punch In Remark": item.punchedInRemark || "-",
+    "Punch Out Remark": item.punchedOutRemark || "-",
+    Status: item.status || "-",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+  // Apply header styling and border like in Leave.jsx
+  const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[cellAddress]) continue;
+
+      worksheet[cellAddress].s = {
+        font: {
+          name: "Arial",
+          sz: R === 0 ? 14 : 10,
+          bold: R === 0,
+          color: { rgb: "000000" },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+        fill:
+          R === 0
+            ? { fgColor: { rgb: "FFFF00" } } // Yellow background for header
+            : undefined,
+      };
+    }
+  }
+
+  // Optional: set column widths
+  worksheet["!cols"] = [
+    { wch: 20 }, // Employee ID
+    { wch: 25 }, // Employee Name
+    { wch: 25 }, // Designation
+    { wch: 20 }, // Location
+    { wch: 30 }, // Punch In
+    { wch: 30 }, // Punch Out
+    { wch: 15 }, // Total Hours
+    { wch: 30 }, // Punch In Remark
+    { wch: 30 }, // Punch Out Remark
+    { wch: 15 }, // Status
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const dataBlob = new Blob([excelBuffer], {
+    type: "application/octet-stream",
+  });
+
+  saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance_Report.xlsx`);
+};
+
   
 
   const handlePunch = (type) => {

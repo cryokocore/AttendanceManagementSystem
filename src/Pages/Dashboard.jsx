@@ -43,7 +43,7 @@ import {
   faQuestionCircle,
   faGaugeSimpleHigh
 } from "@fortawesome/free-solid-svg-icons";
-import "../App.css";
+import "../App.css"
 import { useNavigate } from "react-router-dom";
 import TextArea from "antd/es/input/TextArea";
 import timezone from "dayjs/plugin/timezone"; // Required to handle timezones
@@ -65,6 +65,7 @@ import {
   EyeTwoTone,
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
+import "../App.css";
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
@@ -72,9 +73,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(timezone);
 dayjs.extend(utc);
-message.config({
-  maxCount: 2,
-});
+
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 message.config({
@@ -145,83 +144,6 @@ export default function Dashboard({
   );
 
   const [holidays, setHolidays] = useState([]);
-
-  // const leaveStats = [
-  //   {
-  //     title: "Total Leave Available",
-  //     value:
-  //       leaveBalances.totalAvailable != null
-  //         ? leaveBalances.totalAvailable
-  //         : "-",
-  //     icon: (
-  //       <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
-  //     ),
-  //     color: "#34e134bd",
-  //   },
-  //   {
-  //     title: "Total Leave Taken",
-  //     value: leaveBalances.totalTaken != null ? leaveBalances.totalTaken : "-",
-  //     icon: (
-  //       <FontAwesomeIcon
-  //         icon={faCalendarXmark}
-  //         style={{ color: "#fe00008f" }}
-  //       />
-  //     ),
-  //     color: "#fe00008f",
-  //   },
-  //   {
-  //     title: "Earned Leave Available",
-  //     value:
-  //       leaveBalances.earnedAvailable != null
-  //         ? leaveBalances.earnedAvailable
-  //         : "-",
-  //     icon: (
-  //       <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
-  //     ),
-  //     color: "#faad14b5",
-  //   },
-  //   {
-  //     title: "Personal/Sick Leave Available",
-  //     value:
-  //       leaveBalances.personalAvailable != null
-  //         ? leaveBalances.personalAvailable
-  //         : "-",
-  //     icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
-  //     color: "#0d6efdad",
-  //   },
-  //   {
-  //     title: "Personal/Sick Leave Taken",
-  //     value:
-  //       leaveBalances.personalTaken != null ? leaveBalances.personalTaken : "-",
-  //     icon: (
-  //       <FontAwesomeIcon icon={faCalendarMinus} style={{ color: "#b54dff" }} />
-  //     ),
-  //     color: "#b54dff",
-  //   },
-  //   {
-  //     title: "Unpaid Leave Taken",
-  //     value:
-  //       leaveBalances.unpaidTaken != null ? leaveBalances.unpaidTaken : "-",
-  //     icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
-  //     color: "#008080b0",
-  //   },
-  //   {
-  //     title: "Earned Leave Taken",
-  //     value:
-  //       leaveBalances.earnedTaken != null ? leaveBalances.earnedTaken : "-",
-  //     icon: <FontAwesomeIcon icon={faCalendar} style={{ color: "#91caff" }} />,
-  //     color: "#91caff",
-  //   },
-  //   {
-  //     title: "Compoff Leave Taken",
-  //     value:
-  //       leaveBalances.compoffTaken != null ? leaveBalances.compoffTaken : "-",
-  //     icon: (
-  //       <FontAwesomeIcon icon={faCalendarWeek} style={{ color: "#fe00b2" }} />
-  //     ),
-  //     color: "#fe00b2",
-  //   },
-  // ];
 
   const leaveStats = [
   {
@@ -436,9 +358,10 @@ const attendanceStats = Object.entries(attendanceSummary).map(
      {leaveStats.map((stat) => (
   <Col key={stat.title} xs={24} sm={12} md={12} lg={6} className="mb-4 mt-3">
     <Card
-      hoverable
       bordered={false}
       loading={refreshing}
+            className="hoverDashboard-card"
+
       style={{
         backgroundColor: `${stat.color}20`, // Light transparent background
         borderLeft: `6px solid ${stat.color}`,
@@ -499,83 +422,29 @@ const attendanceStats = Object.entries(attendanceSummary).map(
             icon={<ReloadOutlined />}
             onClick={handleAttendanceRefresh}
           >
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {attendanceRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
 
-        {/* {Object.entries(attendanceSummary).map(([status, count]) => {
-          const color =
-            {
-              Present: "#34e134bd",
-              Punched: "#0d6efdad",
-              "Invalid Time": "#faad14b5",
-              "Less than 9 hr": "#fe00008f",
-
-              Incomplete: "#faad14b5",
-              Absent: "#fe00008f",
-              Unknown: "gray",
-            }[status] || "gray";
-
-          return (
-            <Col
-              key={status}
-              xs={24}
-              sm={12}
-              md={8}
-              lg={6}
-              className="mb-4 mt-3"
-            >
-              <Card
-                className="hover-leave-card"
-                loading={attendanceRefreshing}
-                style={{
-                  borderTop: `4px solid ${color}`,
-                  borderRadius: 4,
-                  height: "100%",
-                }}
-              >
-                <div className="d-flex align-items-center justify-content-center flex-column">
-                  <div style={{ fontSize: 30 }}>
-                    {attendanceIcons[status] || (
-                      <FontAwesomeIcon
-                        icon={faQuestionCircle}
-                        style={{ color: "gray" }}
-                      />
-                    )}
-                  </div>
-                  <div color={color} style={{ fontSize: 16 }}>
-                    {status}
-                  </div>
-                  <Statistic
-                    value={count}
-                    valueStyle={{
-                      fontSize: 20,
-                      fontWeight: "bold",
-                      color: color,
-                      textAlign: "center",
-                    }}
-                  />
-                </div>
-              </Card>
-            </Col>
-          );
-        })} */}
-        {attendanceStats.map((stat) => (
+     
+     {attendanceStats.map((stat) => (
   <Col key={stat.title} xs={24} sm={12} md={8} lg={6} className="mb-4 mt-3">
     <Card
       hoverable
       bordered={false}
       loading={attendanceRefreshing}
+      className="hoverDashboard-card"
+
       style={{
         backgroundColor: stat.backgroundColor,
         borderLeft: `6px solid ${stat.color}`,
         borderRadius: "12px",
+        height: "100%",
         boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
         transition: "all 0.3s ease-in-out",
-        height: "100%",
       }}
     >
-      <div className="d-flex align-items-center">
+      <div className="d-flex align-items-center pt-lg-2 pb-lg-3 ">
         <div
           style={{
             minWidth: 50,
@@ -609,6 +478,7 @@ const attendanceStats = Object.entries(attendanceSummary).map(
     </Card>
   </Col>
 ))}
+
 
       </div>
     </div>

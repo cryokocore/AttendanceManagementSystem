@@ -99,3 +99,39 @@
   background-color: #d48806 !important;
   border-color: #d48806 !important;
 }
+
+.hoverDashboard-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hoverDashboard-card:hover {
+  box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+ .login-card {
+  position: relative;  /* Make it the reference for absolute positioning */
+  width: 400px;
+  border-radius: 12px;
+  overflow: hidden; /* Ensure decorations stay inside */
+  background: white;
+  z-index: 1;
+}
+.login-decoration {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.1), rgba(114, 46, 209, 0.1));
+  top: -150px;
+  right: -150px;
+  z-index: 0;
+}
+.login-decoration-2 {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(114, 46, 209, 0.1), rgba(22, 119, 255, 0.1));
+  bottom: -100px;
+  left: -90px;
+  z-index: 0;
+}
