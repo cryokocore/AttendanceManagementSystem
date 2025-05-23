@@ -927,7 +927,7 @@ export default function Leave({
                   borderLeft: "none",
                   borderRight: "none",
                   borderBottom: "none",
-                  borderRadius: 4,
+                  // borderRadius: 4,
                   height: "100%",
                 
                 }}
