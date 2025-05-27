@@ -18,6 +18,8 @@ import {
 } from "antd";
 import { getDistance } from "geolib";
 import dayjs from "dayjs";
+import duration from "dayjs/plugin/duration";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as XLSX from "xlsx-js-style";
 
@@ -49,8 +51,10 @@ import { saveAs } from "file-saver";
 message.config({
   maxCount: 2,
 });
+dayjs.extend(duration);
 dayjs.extend(timezone);
 dayjs.extend(utc);
+
 
 const { Title, Text } = Typography;
 const OFFICE_LAT = 11.024337591862132;
@@ -85,6 +89,7 @@ export default function Punch({
   const [formLayout, setFormLayout] = useState("vertical");
   const [startDateFilter, setStartDateFilter] = useState(null);
   const [endDateFilter, setEndDateFilter] = useState(null);
+  const [durationSincePunchIn, setDurationSincePunchIn] = useState(null);
   const handleView = (record) => {
     setSelectedRecord(record);
     setIsModalVisible(true);
@@ -108,12 +113,12 @@ export default function Punch({
       const matchesSearch =
         normalize(
           punchInDate.isValid()
-            ? punchInDate.format("MMMM D, YYYY - HH:mm")
+            ? punchInDate.format("MMMM D, YYYY - HH:mm:ss")
             : ""
         ).includes(searchString) ||
         normalize(
           dayjs(item.punchOut).isValid()
-            ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm")
+            ? dayjs(item.punchOut).format("MMMM D, YYYY - HH:mm:ss")
             : ""
         ).includes(searchString) ||
         normalize(item.location).includes(searchString) ||
@@ -127,13 +132,36 @@ export default function Punch({
   };
 
   useEffect(() => {
+  let interval = null;
+
+  if (lastPunchType === "Punch In" && lastPunchTime && dayjs(lastPunchTime).isValid()) {
+    const updateDuration = () => {
+      const now = dayjs();
+      const diff = dayjs(now).diff(dayjs(lastPunchTime));
+      const durationObj = dayjs.duration(diff);
+      const formatted = `${String(durationObj.hours()).padStart(2, "0")}:${String(
+        durationObj.minutes()
+      ).padStart(2, "0")}:${String(durationObj.seconds()).padStart(2, "0")}`;
+      setDurationSincePunchIn(formatted);
+    };
+
+    updateDuration(); // initial call
+    interval = setInterval(updateDuration, 1000);
+  } else {
+    setDurationSincePunchIn(null); // reset if not Punch In
+  }
+
+  return () => clearInterval(interval);
+}, [lastPunchType, lastPunchTime]);
+
+  useEffect(() => {
     if (selectedRecord) {
       form.setFieldsValue({
         punchIn: dayjs(selectedRecord.punchIn).isValid()
-          ? dayjs(selectedRecord.punchIn).format("MMMM D, YYYY - HH:mm")
+          ? dayjs(selectedRecord.punchIn).format("MMMM D, YYYY - HH:mm:ss")
           : "-",
         punchOut: dayjs(selectedRecord.punchOut).isValid()
-          ? dayjs(selectedRecord.punchOut).format("MMMM D, YYYY - HH:mm")
+          ? dayjs(selectedRecord.punchOut).format("MMMM D, YYYY - HH:mm:ss")
           : "-",
         location: selectedRecord.location,
         total: selectedRecord.total,
@@ -242,46 +270,7 @@ export default function Punch({
   }, []);
 
  
-  // const exportToExcel = () => {
-  //   const filteredData = getFilteredData(); 
-  
-  //   const exportData = filteredData.map((item) => ({
-  //     "Employee ID": employeeId,
-  //     "Employee Name": employeeName,
-  //     Designation: employeeDesignation,
-  //     Location: employeeLocation,
-  //     "Punch In": dayjs(item.punchIn).isValid()
-  //       ? dayjs(item.punchIn).format("MMM D, YYYY - HH:mm:ss")
-  //       : "-",
-  //     "Punch Out": dayjs(item.punchOut).isValid()
-  //       ? dayjs(item.punchOut).format("MMM D, YYYY - HH:mm:ss")
-  //       : "-",
-  //     "Total Hours": item.total,
-  //     "Punch In Remark": item.punchedInRemark,
-  //     "Punch Out Remark": item.punchedOutRemark,
-  //     Status: item.status,
-  //   }));
-  
-  //   const worksheet = XLSX.utils.json_to_sheet(exportData);
-  
-  //   // Style headers, set column widths (same as before)...
-  
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
-  
-  //   const excelBuffer = XLSX.write(workbook, {
-  //     bookType: "xlsx",
-  //     type: "array",
-  //   });
-  
-  //   const dataBlob = new Blob([excelBuffer], {
-  //     type: "application/octet-stream",
-  //   });
-  
-  //   saveAs(dataBlob, `${employeeId}_${employeeName}_Attendance Report.xlsx`);
-  // };
-
-
+ 
   const exportToExcel = () => {
   const filteredData = getFilteredData(); 
 
@@ -722,17 +711,51 @@ export default function Punch({
               </Text>
             </div>
 
-            {lastPunchType && lastPunchTime && (
+            {/* {lastPunchType && lastPunchTime && (
               <div className=" rounded-3 p-3 mt-3 hover-status">
                 <Text style={{ fontSize: "16px" }}>
                   <strong>Last {lastPunchType}:</strong>{" "}
-                  {/* {dayjs(lastPunchTime).format("MMMM D, YYYY - hh:mm A")} */}
                   {dayjs(lastPunchTime).isValid()
                     ? dayjs(lastPunchTime).format("MMMM D, YYYY - hh:mm A")
                     : "-"}
                 </Text>
               </div>
-            )}
+            )} */}
+
+            {/* {lastPunchType === "Punch In" && durationSincePunchIn && (
+  <div className="rounded-3 ps-3 pe-3 pb-3 pt-2 hover-status mt-2">
+    <Text style={{ fontSize: "16px" }}>
+      <strong>Duration:</strong>{" "}
+      <Text type="secondary" className="ms-1">
+        {durationSincePunchIn}
+      </Text>
+    </Text>
+  </div>
+)} */}
+
+{lastPunchType && lastPunchTime && (
+  <div className="rounded-3 p-3 mt-3 hover-status">
+    <Text style={{ fontSize: "16px" }}>
+      <strong>Last {lastPunchType}:</strong>{" "}
+      {dayjs(lastPunchTime).isValid()
+        ? dayjs(lastPunchTime).format("MMMM D, YYYY - hh:mm:ss A")
+        : "-"}
+    </Text>
+
+    {lastPunchType === "Punch In" && durationSincePunchIn && (
+      <div style={{ marginTop: "6px" }}>
+        <Text style={{ fontSize: "16px" }}>
+          <strong>Duration:</strong>{" "}
+          <Text  className="ms-1 text-primary" style={{ fontSize: "16px", fontWeight:"bold" }}>
+            {durationSincePunchIn}
+          </Text>
+        </Text>
+      </div>
+    )}
+  </div>
+)}
+
+
             <div className=" rounded-3 ps-3 pe-3 pb-3 mt-3 hover-status ">
               <Space.Compact style={{ width: "100%" }} className="mt-3">
                 <TextArea
