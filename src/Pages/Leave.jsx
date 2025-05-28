@@ -162,7 +162,7 @@ export default function Leave({
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -179,7 +179,7 @@ export default function Leave({
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveRequests&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=leaveRequests&employeeId=${employeeId}`
       );
       const data = await response.json();
       console.log("Leave request:", data);
@@ -465,7 +465,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -845,7 +845,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec",
+        "https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec",
         {
           method: "POST",
           headers: {

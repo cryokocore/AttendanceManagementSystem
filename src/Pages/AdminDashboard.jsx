@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const fetchEmployeeOptions = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=getEmployees`
+        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=getEmployees`
       );
       const result = await res.json();
       if (result.success) {
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=leaveRequests`
+        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=leaveRequests`
       );
       const result = await response.json();
       if (result.success) {
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec",
+        "https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec",
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },

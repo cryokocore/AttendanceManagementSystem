@@ -181,7 +181,7 @@ export default function Punch({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -391,7 +391,7 @@ export default function Punch({
 
     // Send the data to the server via POST request
     fetch(
-      "https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec",
+      "https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec",
       {
         method: "POST",
         headers: {
@@ -414,92 +414,207 @@ export default function Punch({
         setdisableButton(false);
       });
   };
+  const fetchApprovedLeaves = async () => {
+  const res = await fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=approvedLeaves&employeeId=${employeeId}`);
+  const data = await res.json();
+  if (data.success) return data.leaves;
+  return [];
+};
+
+
+  // const fetchAttendance = async () => {
+  //   try {
+  //     const res = await fetch(
+  //       `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?employeeId=${employeeId}&action=attendance`
+  //     );
+
+  //     const data = await res.json();
+  //     // console.log(data);
+
+  //     if (data.success) {
+  //       const cleaned = data.data.map((item, index) => {
+  //         const punchIn = item["Punch in"] || null;
+  //         const punchOut = item["Punch out"] || null;
+  //         const total = item["Total Hours"] || "-";
+  //         const punchedInRemark = item["Punch In Remark"] || "-";
+  //         const punchedOutRemark = item["Punch Out Remark"] || "-";
+  //         const location = item["Location"] || "-";
+  //         const status = item["Status"] || "-";
+
+  //         if (punchIn && punchOut && new Date(punchOut) < new Date(punchIn)) {
+  //           message.warning(
+  //             `Warning: Punch Out time is earlier than Punch In for ${dayjs(
+  //               punchIn
+  //             ).format("MMMM D, YYYY")}`
+  //           );
+  //         }
+
+  //         return {
+  //           key: index,
+  //           punchIn,
+  //           punchOut,
+  //           total,
+  //           punchedInRemark,
+  //           punchedOutRemark,
+  //           location,
+  //           status,
+  //         };
+  //       });
+
+  //       // Sort data by most recent punchIn first
+  //       const sortedCleaned = cleaned.sort(
+  //         (a, b) =>
+  //           new Date(b.punchIn).getTime() - new Date(a.punchIn).getTime()
+  //       );
+
+  //       setData(sortedCleaned);
+
+  //       // Combine and sort all punches to find last
+  //       const allPunches = data.data.flatMap((item) => {
+  //         const punches = [];
+  //         if (item["Punch in"] && item["Punch in"] !== "-") {
+  //           punches.push({
+  //             type: "Punch In",
+  //             time: item["Punch in"],
+  //           });
+  //         }
+
+  //         if (item["Punch out"] && item["Punch out"] !== "-") {
+  //           punches.push({
+  //             type: "Punch Out",
+  //             time: item["Punch out"],
+  //           });
+  //         }
+  //         return punches;
+  //       });
+
+  //       const sorted = allPunches.sort(
+  //         (a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf()
+  //       );
+
+  //       if (sorted.length > 0 && dayjs(sorted[0].time).isValid()) {
+  //         setLastPunchType(sorted[0].type);
+  //         setLastPunchTime(sorted[0].time);
+  //       } else {
+  //         setLastPunchType(null);
+  //         setLastPunchTime(null);
+  //       }
+  //     } else {
+  //       message.error("Failed to fetch attendance data");
+  //     }
+  //   } catch (err) {
+  //     // console.error(err);
+  //     message.error("Error fetching data");
+  //   }
+  // };
 
   const fetchAttendance = async () => {
-    try {
-      const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbyswppht_KPNgMUwgiZXu47ooXgXfO0RPQ1oyhmhljtrndfiauSURdt0soO_qzeV42O/exec?employeeId=${employeeId}&action=attendance`
+  try {
+    const [attendanceRes, leaveRes] = await Promise.all([
+      fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?employeeId=${employeeId}&action=attendance`),
+      fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=approvedLeaves&employeeId=${employeeId}`)
+    ]);
+
+    const attendanceData = await attendanceRes.json();
+    const leaveData = await leaveRes.json();
+
+    const approvedLeaves = leaveData.success ? leaveData.leaves : [];
+    console.log("Approved Leaves:", approvedLeaves);
+
+    if (attendanceData.success) {
+      const cleaned = attendanceData.data.map((item, index) => {
+        const punchIn = item["Punch in"] || null;
+        const punchOut = item["Punch out"] || null;
+        const total = item["Total Hours"] || "-";
+        const punchedInRemark = item["Punch In Remark"] || "-";
+        const punchedOutRemark = item["Punch Out Remark"] || "-";
+        const location = item["Location"] || "-";
+        let status = item["Status"] || "-";
+
+        const punchDate = dayjs(punchIn || punchOut);
+        // if (status === "Absent" && punchDate.isValid()) {
+        //   const approved = approvedLeaves.find(leave => {
+        //     const [start, end] = leave.dateRange.split(",").map(d => dayjs(d.trim()));
+        //     return punchDate.isBetween(start, end, "day", "[]");
+        //   });
+
+        //   if (approved) {
+        //     status = approved.leaveType;
+        //   }
+        // }
+                if ((status === "Absent" || status === "-") && punchDate.isValid()) {
+          const approved = approvedLeaves.find(leave => {
+            const [startStr, endStr] = leave.dateRange.split(",").map(s => s.trim());
+
+            // Adjust the format depending on how date strings are stored
+            const start = dayjs(startStr, "YYYY-MM-DD HH:mm");
+            const end = dayjs(endStr, "YYYY-MM-DD HH:mm");
+
+            const match = punchDate.isBetween(start, end, "day", "[]");
+
+            // 🔍 Debug logs for each comparison
+            console.log("🗓 Punch Date:", punchDate.format("YYYY-MM-DD"));
+            console.log("📅 Leave Start:", start.format("YYYY-MM-DD"));
+            console.log("📅 Leave End:", end.format("YYYY-MM-DD"));
+            console.log("✅ Match Found:", match);
+
+            return match;
+          });
+
+          if (approved) {
+            console.log(`✅ Replacing status with approved leave type: ${approved.leaveType}`);
+            status = approved.leaveType;
+          }
+        }
+
+        return {
+          key: index,
+          punchIn,
+          punchOut,
+          total,
+          punchedInRemark,
+          punchedOutRemark,
+          location,
+          status,
+        };
+      });
+
+      const sortedCleaned = cleaned.sort(
+        (a, b) => new Date(b.punchIn).getTime() - new Date(a.punchIn).getTime()
       );
 
-      const data = await res.json();
-      // console.log(data);
+      setData(sortedCleaned);
 
-      if (data.success) {
-        const cleaned = data.data.map((item, index) => {
-          const punchIn = item["Punch in"] || null;
-          const punchOut = item["Punch out"] || null;
-          const total = item["Total Hours"] || "-";
-          const punchedInRemark = item["Punch In Remark"] || "-";
-          const punchedOutRemark = item["Punch Out Remark"] || "-";
-          const location = item["Location"] || "-";
-          const status = item["Status"] || "-";
-
-          if (punchIn && punchOut && new Date(punchOut) < new Date(punchIn)) {
-            message.warning(
-              `Warning: Punch Out time is earlier than Punch In for ${dayjs(
-                punchIn
-              ).format("MMMM D, YYYY")}`
-            );
-          }
-
-          return {
-            key: index,
-            punchIn,
-            punchOut,
-            total,
-            punchedInRemark,
-            punchedOutRemark,
-            location,
-            status,
-          };
-        });
-
-        // Sort data by most recent punchIn first
-        const sortedCleaned = cleaned.sort(
-          (a, b) =>
-            new Date(b.punchIn).getTime() - new Date(a.punchIn).getTime()
-        );
-
-        setData(sortedCleaned);
-
-        // Combine and sort all punches to find last
-        const allPunches = data.data.flatMap((item) => {
-          const punches = [];
-          if (item["Punch in"] && item["Punch in"] !== "-") {
-            punches.push({
-              type: "Punch In",
-              time: item["Punch in"],
-            });
-          }
-
-          if (item["Punch out"] && item["Punch out"] !== "-") {
-            punches.push({
-              type: "Punch Out",
-              time: item["Punch out"],
-            });
-          }
-          return punches;
-        });
-
-        const sorted = allPunches.sort(
-          (a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf()
-        );
-
-        if (sorted.length > 0 && dayjs(sorted[0].time).isValid()) {
-          setLastPunchType(sorted[0].type);
-          setLastPunchTime(sorted[0].time);
-        } else {
-          setLastPunchType(null);
-          setLastPunchTime(null);
+      const allPunches = attendanceData.data.flatMap((item) => {
+        const punches = [];
+        if (item["Punch in"] && item["Punch in"] !== "-") {
+          punches.push({ type: "Punch In", time: item["Punch in"] });
         }
+        if (item["Punch out"] && item["Punch out"] !== "-") {
+          punches.push({ type: "Punch Out", time: item["Punch out"] });
+        }
+        return punches;
+      });
+
+      const sorted = allPunches.sort(
+        (a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf()
+      );
+
+      if (sorted.length > 0 && dayjs(sorted[0].time).isValid()) {
+        setLastPunchType(sorted[0].type);
+        setLastPunchTime(sorted[0].time);
       } else {
-        message.error("Failed to fetch attendance data");
+        setLastPunchType(null);
+        setLastPunchTime(null);
       }
-    } catch (err) {
-      // console.error(err);
-      message.error("Error fetching data");
+    } else {
+      message.error("Failed to fetch attendance data");
     }
-  };
+  } catch (err) {
+    message.error("Error fetching data");
+  }
+};
+
 
   useEffect(() => {
     if (employeeId) {
@@ -735,17 +850,17 @@ export default function Punch({
 
 {lastPunchType && lastPunchTime && (
   <div className="rounded-3 p-3 mt-3 hover-status">
-    <Text style={{ fontSize: "16px" }}>
-      <strong>Last {lastPunchType}:</strong>{" "}
+    <Text>
+      <strong style={{ fontSize: "16px" }}>Last {lastPunchType}:</strong>{" "}
       {dayjs(lastPunchTime).isValid()
-        ? dayjs(lastPunchTime).format("MMMM D, YYYY - hh:mm:ss A")
+        ? dayjs(lastPunchTime).format("D-MM-YYYY hh:mm:ss A")
         : "-"}
     </Text>
 
     {lastPunchType === "Punch In" && durationSincePunchIn && (
       <div style={{ marginTop: "6px" }}>
-        <Text style={{ fontSize: "16px" }}>
-          <strong>Duration:</strong>{" "}
+        <Text >
+          <strong style={{ fontSize: "16px" }}>Duration:</strong>{" "}
           <Text  className="ms-1 text-primary" style={{ fontSize: "16px", fontWeight:"bold" }}>
             {durationSincePunchIn}
           </Text>
