@@ -181,7 +181,7 @@ export default function Punch({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -391,7 +391,7 @@ export default function Punch({
 
     // Send the data to the server via POST request
     fetch(
-      "https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec",
+      "https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec",
       {
         method: "POST",
         headers: {
@@ -415,7 +415,7 @@ export default function Punch({
       });
   };
   const fetchApprovedLeaves = async () => {
-  const res = await fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=approvedLeaves&employeeId=${employeeId}`);
+  const res = await fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=approvedLeaves&employeeId=${employeeId}`);
   const data = await res.json();
   if (data.success) return data.leaves;
   return [];
@@ -508,18 +508,125 @@ export default function Punch({
   //   }
   // };
 
-  const fetchAttendance = async () => {
+//   const fetchAttendance = async () => {
+//   try {
+//     const [attendanceRes, leaveRes] = await Promise.all([
+//       fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?employeeId=${employeeId}&action=attendance`),
+//       fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=approvedLeaves&employeeId=${employeeId}`)
+//     ]);
+
+//     const attendanceData = await attendanceRes.json();
+//     const leaveData = await leaveRes.json();
+
+//     const approvedLeaves = leaveData.success ? leaveData.leaves : [];
+//     console.log("Approved Leaves:", approvedLeaves);
+
+//     if (attendanceData.success) {
+//       const cleaned = attendanceData.data.map((item, index) => {
+//         const punchIn = item["Punch in"] || null;
+//         const punchOut = item["Punch out"] || null;
+//         const total = item["Total Hours"] || "-";
+//         const punchedInRemark = item["Punch In Remark"] || "-";
+//         const punchedOutRemark = item["Punch Out Remark"] || "-";
+//         const location = item["Location"] || "-";
+//         let status = item["Status"] || "-";
+
+//         const punchDate = dayjs(punchIn || punchOut);
+//         // if (status === "Absent" && punchDate.isValid()) {
+//         //   const approved = approvedLeaves.find(leave => {
+//         //     const [start, end] = leave.dateRange.split(",").map(d => dayjs(d.trim()));
+//         //     return punchDate.isBetween(start, end, "day", "[]");
+//         //   });
+
+//         //   if (approved) {
+//         //     status = approved.leaveType;
+//         //   }
+//         // }
+//                 if ((status === "Absent" || status === "-") && punchDate.isValid()) {
+//           const approved = approvedLeaves.find(leave => {
+//             const [startStr, endStr] = leave.dateRange.split(",").map(s => s.trim());
+
+//             // Adjust the format depending on how date strings are stored
+//             const start = dayjs(startStr, "YYYY-MM-DD HH:mm");
+//             const end = dayjs(endStr, "YYYY-MM-DD HH:mm");
+
+//             const match = punchDate.isBetween(start, end, "day", "[]");
+
+//             // 🔍 Debug logs for each comparison
+//             console.log("🗓 Punch Date:", punchDate.format("YYYY-MM-DD"));
+//             console.log("📅 Leave Start:", start.format("YYYY-MM-DD"));
+//             console.log("📅 Leave End:", end.format("YYYY-MM-DD"));
+//             console.log("✅ Match Found:", match);
+
+//             return match;
+//           });
+
+//           if (approved) {
+//             console.log(`✅ Replacing status with approved leave type: ${approved.leaveType}`);
+//             status = approved.leaveType;
+//           }
+//         }
+
+//         return {
+//           key: index,
+//           punchIn,
+//           punchOut,
+//           total,
+//           punchedInRemark,
+//           punchedOutRemark,
+//           location,
+//           status,
+//         };
+//       });
+
+//       const sortedCleaned = cleaned.sort(
+//         (a, b) => new Date(b.punchIn).getTime() - new Date(a.punchIn).getTime()
+//       );
+
+//       setData(sortedCleaned);
+
+//       const allPunches = attendanceData.data.flatMap((item) => {
+//         const punches = [];
+//         if (item["Punch in"] && item["Punch in"] !== "-") {
+//           punches.push({ type: "Punch In", time: item["Punch in"] });
+//         }
+//         if (item["Punch out"] && item["Punch out"] !== "-") {
+//           punches.push({ type: "Punch Out", time: item["Punch out"] });
+//         }
+//         return punches;
+//       });
+
+//       const sorted = allPunches.sort(
+//         (a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf()
+//       );
+
+//       if (sorted.length > 0 && dayjs(sorted[0].time).isValid()) {
+//         setLastPunchType(sorted[0].type);
+//         setLastPunchTime(sorted[0].time);
+//       } else {
+//         setLastPunchType(null);
+//         setLastPunchTime(null);
+//       }
+//     } else {
+//       message.error("Failed to fetch attendance data");
+//     }
+//   } catch (err) {
+//     message.error("Error fetching data");
+//   }
+// };
+
+const fetchAttendance = async () => {
   try {
     const [attendanceRes, leaveRes] = await Promise.all([
-      fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?employeeId=${employeeId}&action=attendance`),
-      fetch(`https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=approvedLeaves&employeeId=${employeeId}`)
+      fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?employeeId=${employeeId}&action=attendance`),
+      fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=approvedLeaves&employeeId=${employeeId}`)
     ]);
 
     const attendanceData = await attendanceRes.json();
     const leaveData = await leaveRes.json();
 
     const approvedLeaves = leaveData.success ? leaveData.leaves : [];
-    console.log("Approved Leaves:", approvedLeaves);
+    console.log("✅ Approved Leaves from server:", approvedLeaves);
 
     if (attendanceData.success) {
       const cleaned = attendanceData.data.map((item, index) => {
@@ -532,37 +639,38 @@ export default function Punch({
         let status = item["Status"] || "-";
 
         const punchDate = dayjs(punchIn || punchOut);
-        // if (status === "Absent" && punchDate.isValid()) {
-        //   const approved = approvedLeaves.find(leave => {
-        //     const [start, end] = leave.dateRange.split(",").map(d => dayjs(d.trim()));
-        //     return punchDate.isBetween(start, end, "day", "[]");
-        //   });
 
-        //   if (approved) {
-        //     status = approved.leaveType;
-        //   }
-        // }
-                if ((status === "Absent" || status === "-") && punchDate.isValid()) {
+        // Update status if absent and within approved leave range
+        if ((status === "Absent" || status === "-") && punchDate.isValid()) {
           const approved = approvedLeaves.find(leave => {
-            const [startStr, endStr] = leave.dateRange.split(",").map(s => s.trim());
+            try {
+              const [startStr, endStr] = leave.dateRange.split(",").map(s => s.trim());
 
-            // Adjust the format depending on how date strings are stored
-            const start = dayjs(startStr, "YYYY-MM-DD HH:mm");
-            const end = dayjs(endStr, "YYYY-MM-DD HH:mm");
+              const start = dayjs(startStr, [
+                "YYYY-MM-DD HH:mm",
+                "YYYY-MM-DD HH:mm:ss",
+                "YYYY-MM-DD",
+                "YYYY-MM-DD h:mm A",
+              ]);
 
-            const match = punchDate.isBetween(start, end, "day", "[]");
+              const end = dayjs(endStr, [
+                "YYYY-MM-DD HH:mm",
+                "YYYY-MM-DD HH:mm:ss",
+                "YYYY-MM-DD",
+                "YYYY-MM-DD h:mm A",
+              ]);
 
-            // 🔍 Debug logs for each comparison
-            console.log("🗓 Punch Date:", punchDate.format("YYYY-MM-DD"));
-            console.log("📅 Leave Start:", start.format("YYYY-MM-DD"));
-            console.log("📅 Leave End:", end.format("YYYY-MM-DD"));
-            console.log("✅ Match Found:", match);
+              if (!start.isValid() || !end.isValid()) return false;
 
-            return match;
+              return punchDate.isSameOrAfter(start, "day") && punchDate.isSameOrBefore(end, "day");
+            } catch (err) {
+              console.error("Error parsing leave date range:", err);
+              return false;
+            }
           });
 
           if (approved) {
-            console.log(`✅ Replacing status with approved leave type: ${approved.leaveType}`);
+            console.log(`Replacing Absent with Leave: ${approved.leaveType}`);
             status = approved.leaveType;
           }
         }
@@ -611,9 +719,11 @@ export default function Punch({
       message.error("Failed to fetch attendance data");
     }
   } catch (err) {
+    console.error("❌ fetchAttendance error:", err);
     message.error("Error fetching data");
   }
 };
+
 
 
   useEffect(() => {
@@ -717,6 +827,12 @@ export default function Punch({
       width: 180,
       ellipsis: true,
       render: (text) => {
+         const leaveTypes = [
+      "Earned leave",
+      "Unpaid leave",
+      "Compoff leave",
+      "Personal/sick leave"
+    ];
         const colorMap = {
           Present: "success",
           Punched: "processing",
@@ -727,7 +843,9 @@ export default function Punch({
           Unknown: "gray",
         };
 
-        const color = colorMap[text] || "gray";
+        // const color = colorMap[text] || "gray";
+    const color = leaveTypes.includes(text) ? "error" : (colorMap[text] || "default");
+
 
         return (
           <Tag

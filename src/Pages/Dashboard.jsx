@@ -242,7 +242,7 @@ const attendanceStats = Object.entries(attendanceSummary).map(
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -260,7 +260,7 @@ const attendanceStats = Object.entries(attendanceSummary).map(
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -281,7 +281,7 @@ const attendanceStats = Object.entries(attendanceSummary).map(
   const fetchAttendance = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbwc22psOaWl6P848upjsLrfj03O_hcfOH_etTGrajhe4weZZjPbVZoaSiR89YrUH67z/exec?employeeId=${employeeId}&action=attendance`
+        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?employeeId=${employeeId}&action=attendance`
       );
 
       const data = await res.json();
