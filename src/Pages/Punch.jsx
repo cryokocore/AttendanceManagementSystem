@@ -181,7 +181,7 @@ export default function Punch({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -391,7 +391,7 @@ export default function Punch({
 
     // Send the data to the server via POST request
     fetch(
-      "https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec",
+      "https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec",
       {
         method: "POST",
         headers: {
@@ -415,7 +415,7 @@ export default function Punch({
       });
   };
   const fetchApprovedLeaves = async () => {
-  const res = await fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=approvedLeaves&employeeId=${employeeId}`);
+  const res = await fetch(`https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=approvedLeaves&employeeId=${employeeId}`);
   const data = await res.json();
   if (data.success) return data.leaves;
   return [];
@@ -618,8 +618,8 @@ export default function Punch({
 const fetchAttendance = async () => {
   try {
     const [attendanceRes, leaveRes] = await Promise.all([
-      fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?employeeId=${employeeId}&action=attendance`),
-      fetch(`https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=approvedLeaves&employeeId=${employeeId}`)
+      fetch(`https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?employeeId=${employeeId}&action=attendance`),
+      fetch(`https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=approvedLeaves&employeeId=${employeeId}`)
     ]);
 
     const attendanceData = await attendanceRes.json();

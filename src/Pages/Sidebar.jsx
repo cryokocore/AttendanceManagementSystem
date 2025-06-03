@@ -34,7 +34,7 @@ export default function Sidebar({ user, setUser, username, employeeId }) {
   const handleClick = (e) => {
     setCurrent(e.key);
     navigate(e.key === "dashboard" ? "/dashboard" : `/${e.key}`);
-    if (isMobile) setCollapsed(true); // auto-close sidebar on mobile after click
+    if (isMobile) setCollapsed(true);
   };
 
   const handleDrawerMenuClick = (e) => {

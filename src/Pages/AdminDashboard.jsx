@@ -13,9 +13,12 @@ import {
   Row,
   DatePicker,
   Select,
+  Statistic,
+  Skeleton
 } from "antd";
 import { saveAs } from "file-saver";
 import {
+  ScheduleOutlined,
   CheckOutlined,
   CloseOutlined,
   EyeOutlined,
@@ -27,6 +30,7 @@ import {
   ReloadOutlined,
   ArrowDownOutlined,
   ClockCircleOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as XLSX from "xlsx-js-style";
@@ -62,7 +66,8 @@ export default function AdminDashboard() {
   const [employeeOptions, setEmployeeOptions] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
-
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+const [leaveBalance, setLeaveBalance] = useState(null);
   useEffect(() => {
     fetchLeaveRequests();
   }, [tableRefresh]);
@@ -74,7 +79,7 @@ export default function AdminDashboard() {
   const fetchEmployeeOptions = async () => {
     try {
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=getEmployees`
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=getEmployees`
       );
       const result = await res.json();
       if (result.success) {
@@ -140,7 +145,7 @@ export default function AdminDashboard() {
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=leaveRequests`
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=leaveRequests`
       );
       const result = await response.json();
       if (result.success) {
@@ -174,7 +179,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec",
+        "https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec",
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -194,6 +199,37 @@ export default function AdminDashboard() {
       message.error("Error updating request");
     }
   };
+
+
+  const fetchAttendance = async (employeeId) => {
+  try {
+    const res = await fetch(
+      `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=attendance&employeeId=${employeeId}`
+    );
+    const result = await res.json();
+    if (result.success) {
+      setAttendanceRecords(result.data);
+    }
+  } catch (err) {
+    message.error("Failed to fetch attendance data");
+  }
+};
+
+const fetchLeaveBalance = async (employeeId) => {
+  try {
+    const res = await fetch(
+      `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=leaveBalance&employeeId=${employeeId}`
+    );
+    const result = await res.json();
+    if (result.success) {
+      setLeaveBalance(result.balance);
+      console.log(result)
+    }
+  } catch (err) {
+    message.error("Failed to fetch leave balance");
+  }
+};
+
 
   const openEditModal = (record) => {
     setEditModal({ visible: true, record });
@@ -683,7 +719,13 @@ export default function AdminDashboard() {
                   optionFilterProp="children"
                   size="large"
                   value={selectedEmployeeId}
-                  onChange={(value) => setSelectedEmployeeId(value)}
+                  // onChange={(value) => setSelectedEmployeeId(value)}
+                  onChange={async (value) => {
+  setSelectedEmployeeId(value);
+  await fetchAttendance(value);
+  await fetchLeaveBalance(value);
+}}
+
                   filterOption={(input, option) =>
                     option.children
                       .toLowerCase()
@@ -754,6 +796,180 @@ export default function AdminDashboard() {
               scroll={{ x: "max-content" }}
               className="mt-3"
             />
+
+              {selectedEmployeeId && (
+  // <Card className="mt-4 shadow" style={{ borderRadius: "12px" }}>
+  //   <h4>
+  //     <UserOutlined className="me-2" />
+  //     Employee Details - <strong>{selectedEmployeeId}</strong>
+  //   </h4>
+
+  //   {leaveBalance && (
+  //     <Row gutter={16} className="mt-3">
+  //       <Col span={6}>
+  //         <Card bordered={false} style={{ background: "#f6ffed" }}>
+  //           <h5 className="text-success">PSL Available</h5>
+  //           <p>{leaveBalance.personalAvailable}</p>
+  //         </Card>
+  //       </Col>
+  //       <Col span={6}>
+  //         <Card bordered={false} style={{ background: "#fff1f0" }}>
+  //           <h5 className="text-danger">PSL Taken</h5>
+  //           <p>{leaveBalance.personalTaken}</p>
+  //         </Card>
+  //       </Col>
+  //       <Col span={6}>
+  //         <Card bordered={false} style={{ background: "#e6f7ff" }}>
+  //           <h5 className="text-info">Earned Available</h5>
+  //           <p>{leaveBalance.earnedAvailable}</p>
+  //         </Card>
+  //       </Col>
+  //       <Col span={6}>
+  //         <Card bordered={false} style={{ background: "#fffbe6" }}>
+  //           <h5 className="text-warning">Unpaid Taken</h5>
+  //           <p>{leaveBalance.unpaidTaken}</p>
+  //         </Card>
+  //       </Col>
+  //     </Row>
+  //   )}
+
+  //   {attendanceRecords.length > 0 && (
+  //     <div className="mt-4">
+  //       <h5>Last 5 Attendance Records:</h5>
+  //       <Table
+  //         dataSource={attendanceRecords.slice(-5).reverse()}
+  //         columns={[
+  //           {
+  //             title: "Date",
+  //             dataIndex: "Punch in",
+  //             render: (val) =>
+  //               val ? dayjs(val).format("MMM D, YYYY") : "-",
+  //           },
+  //           {
+  //             title: "Punch In",
+  //             dataIndex: "Punch in",
+  //             render: (val) =>
+  //               val ? dayjs(val).format("HH:mm") : "-",
+  //           },
+  //           {
+  //             title: "Punch Out",
+  //             dataIndex: "Punch out",
+  //             render: (val) =>
+  //               val ? dayjs(val).format("HH:mm") : "-",
+  //           },
+  //           { title: "Status", dataIndex: "Status" },
+  //         ]}
+  //         pagination={false}
+  //         size="small"
+  //         rowKey={(record, index) => index}
+  //       />
+  //     </div>
+  //   )}
+  // </Card>
+
+//   <Card className="mt-4 shadow" style={{ borderRadius: "12px" }}>
+//   <h4>
+//     <UserOutlined className="me-2" />
+//     Employee Details – <strong>{selectedEmployeeId}</strong>
+//   </h4>
+
+//   {leaveBalance && (
+//   <Row gutter={[16, 16]} className="mt-3">
+//     <Col span={6}>
+//       <Statistic title="PSL Available" value={leaveBalance.personalAvailable} valueStyle={{ color: "#52c41a" }} />
+//     </Col>
+//     <Col span={6}>
+//       <Statistic title="PSL Taken" value={leaveBalance.personalTaken} valueStyle={{ color: "#ff4d4f" }} />
+//     </Col>
+//     <Col span={6}>
+//       <Statistic title="Earned Available" value={leaveBalance.earnedAvailable} valueStyle={{ color: "#1890ff" }} />
+//     </Col>
+//     <Col span={6}>
+//       <Statistic title="Unpaid Taken" value={leaveBalance.unpaidTaken} valueStyle={{ color: "#faad14" }} />
+//     </Col>
+//     <Col span={6}>
+//       <Statistic title="Total Leave Available" value={leaveBalance.totalLeave} valueStyle={{ color: "#faad14" }} />
+//     </Col>
+//     <Col span={6}>
+//       <Statistic title="Total Leave Taken" value={leaveBalance.totalLeaveTaken} valueStyle={{ color: "#faad14" }} />
+//     </Col>
+//   </Row>
+// )}
+
+// </Card>
+
+<Card className="mt-4 shadow" style={{ borderRadius: "12px" }}>
+  <h4>
+    <UserOutlined className="me-2" />
+    Leave Balance Summary – <strong>{selectedEmployeeId}</strong>
+  </h4>
+
+  {leaveBalance ? (
+    <Row gutter={[16, 16]} className="mt-3">
+      <Col span={6}><Statistic title="Total Leave Available" value={leaveBalance.totalAvailable} /></Col>
+      <Col span={6}><Statistic title="Total Leave Taken" value={leaveBalance.totalTaken} /></Col>
+      <Col span={6}><Statistic title="Earned Leave Available" value={leaveBalance.earnedAvailable} valueStyle={{ color: "#1890ff" }} /></Col>
+      <Col span={6}><Statistic title="PSL Available" value={leaveBalance.personalAvailable} valueStyle={{ color: "#52c41a" }} /></Col>
+      <Col span={6}><Statistic title="PSL Taken" value={leaveBalance.personalTaken} valueStyle={{ color: "#ff4d4f" }} /></Col>
+      <Col span={6}><Statistic title="Unpaid Leave Taken" value={leaveBalance.unpaidTaken} valueStyle={{ color: "#faad14" }} /></Col>
+      <Col span={6}><Statistic title="Compoff Leave Taken" value={leaveBalance.compoffTaken} valueStyle={{ color: "#722ed1" }} /></Col>
+    </Row>
+  ) : (
+    <Skeleton active />
+  )}
+</Card>
+
+)}
+
+<Card className="mt-4 shadow" style={{ borderRadius: "12px" }}>
+  <h4>
+    <ScheduleOutlined className="me-2" />
+    Full Attendance Records
+  </h4>
+
+  <Table
+    dataSource={attendanceRecords}
+    columns={[
+      {
+        title: "Date",
+        dataIndex: "Punch in",
+        render: (val) => val ? dayjs(val).format("MMM D, YYYY") : "-",
+      },
+      {
+        title: "Punch In",
+        dataIndex: "Punch in",
+        render: (val) => val ? dayjs(val).format("HH:mm") : "-",
+      },
+      {
+        title: "Punch Out",
+        dataIndex: "Punch out",
+        render: (val) => val ? dayjs(val).format("HH:mm") : "-",
+      },
+      {
+        title: "Hours",
+        dataIndex: "Working Hours", // optional if calculated
+        render: (_, row) => {
+          const punchIn = row["Punch in"];
+          const punchOut = row["Punch out"];
+          if (punchIn && punchOut) {
+            const diff = dayjs(punchOut).diff(dayjs(punchIn), "minute");
+            const hrs = Math.floor(diff / 60);
+            const min = diff % 60;
+            return `${hrs}h ${min}m`;
+          }
+          return "-";
+        },
+      },
+      { title: "Status", dataIndex: "Status" },
+    ]}
+    rowKey={(record, index) => index}
+    pagination={{ pageSize: 10 }}
+    scroll={{ x: "max-content" }}
+  />
+</Card>
+
+
+
             {/* Deny Modal */}
             <Modal
               title="Enter reason for denial"

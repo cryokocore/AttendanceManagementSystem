@@ -105,6 +105,9 @@ export default function Leave({
   const [exportDisable, setExportDisable] = useState(false);
   const [leaveDuration, setLeaveDuration] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [hasOpenPunchToday, setHasOpenPunchToday] = useState(false);
+
   const [leaveBalances, setLeaveBalances] = useState({
     totalAvailable: 0,
     totalTaken: 0,
@@ -159,10 +162,41 @@ export default function Leave({
     setSearchText(e.target.value.toLowerCase());
   };
 
+  const checkOpenPunchForToday = async () => {
+  try {
+    const response = await fetch(
+      `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=attendance&employeeId=${employeeId}`
+    );
+    const data = await response.json();
+
+    if (data.success && Array.isArray(data.data)) {
+      const today = dayjs().format("YYYY-MM-DD");
+      const todayRecord = data.data.find((entry) => {
+        const punchInDate = entry["Punch in"]
+          ? dayjs(entry["Punch in"]).format("YYYY-MM-DD")
+          : null;
+        return punchInDate === today;
+      });
+
+      if (todayRecord) {
+        const hasPunchedIn = !!todayRecord["Punch in"];
+        const hasPunchedOut = !!todayRecord["Punch out"];
+        setHasOpenPunchToday(hasPunchedIn && !hasPunchedOut);
+      } else {
+        setHasOpenPunchToday(false);
+      }
+    }
+  } catch (err) {
+    console.error("Error checking punch status:", err);
+    setHasOpenPunchToday(false); 
+  }
+};
+
+
   const fetchLeaveBalance = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=leaveBalance&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=leaveBalance&employeeId=${employeeId}`
       );
       const data = await response.json();
 
@@ -176,10 +210,168 @@ export default function Leave({
     }
   };
 
+  const checkIfDateIsPresent = async (date) => {
+    try {
+      const formattedDate = date.format("YYYY-MM-DD");
+      const response = await fetch(
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=attendance&employeeId=${employeeId}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        return data.data.some((entry) => {
+          const punchInDate = dayjs(entry["Punch in"]).format("YYYY-MM-DD");
+          return punchInDate === formattedDate && entry["Status"] === "Present";
+        });
+      }
+    } catch (err) {
+      console.error("Error checking attendance:", err);
+    }
+    return false;
+  };
+
+  // const validateDatesAgainstAttendance = async (dates) => {
+  //   if (!dates || dates.length !== 2) return;
+
+  //   const [start, end] = dates;
+  //   let date = start.clone();
+  //   while (date.isSameOrBefore(end, "day")) {
+  //     const isPresent = await checkIfDateIsPresent(date);
+  //     if (isPresent) {
+  //       setFormError("You cannot request leave for days marked as Present.");
+  //       return false;
+  //     }
+  //     date = date.add(1, "day");
+  //   }
+
+  //   setFormError(null);
+  //   const duration = calculateLeaveDuration(start, end);
+  //   setLeaveDuration(duration);
+  //   return true;
+  // };
+
+  // const validateDatesAgainstAttendance = async (dates) => {
+  //   setIsValidating(true);
+  //   try {
+  //     if (!dates || dates.length !== 2) return;
+
+  //     const [start, end] = dates;
+  //     let date = start.clone();
+  //     while (date.isSameOrBefore(end, "day")) {
+  //       const isPresent = await checkIfDateIsPresent(date);
+  //       if (isPresent) {
+  //         setFormError("You cannot request leave for days marked as Present.");
+  //         return false;
+  //       }
+  //       date = date.add(1, "day");
+  //     }
+
+  //     setFormError(null);
+  //     const duration = calculateLeaveDuration(start, end);
+  //     setLeaveDuration(duration);
+  //     return true;
+  //   } finally {
+  //     setIsValidating(false);
+  //   }
+  // };
+
+ const validateDatesAgainstAttendance = async (dates) => {
+  setIsValidating(true);
+  try {
+    if (!dates || dates.length !== 2) return;
+
+    const [start, end] = dates;
+    let date = start.clone();
+
+    while (date.isSameOrBefore(end, "day")) {
+      const isPresent = await checkIfDateIsPresent(date);
+      if (isPresent) {
+        setFormError("You cannot request leave for days marked as Present.");
+        message.error("You cannot request leave for days marked as Present.");
+        return false;
+      }
+      date = date.add(1, "day");
+    }
+
+    // ✅ Check if today is in selected range
+    const today = dayjs().startOf("day");
+    if (start.isSameOrBefore(today, "day") && end.isSameOrAfter(today, "day")) {
+      const response = await fetch(
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=attendance&employeeId=${employeeId}`
+      );
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const todayRecord = data.data.find((entry) => {
+          const punchInDate = entry["Punch in"]
+            ? dayjs(entry["Punch in"]).format("YYYY-MM-DD")
+            : null;
+          return punchInDate === today.format("YYYY-MM-DD");
+        });
+
+        if (todayRecord) {
+          const hasPunchedIn = !!todayRecord["Punch in"];
+          const hasPunchedOut = !!todayRecord["Punch out"];
+          const open = hasPunchedIn && !hasPunchedOut;
+          setHasOpenPunchToday(open);
+
+          if (open) {
+            message.error("You must punch out before applying leave for today.");
+            return false;
+          }
+        }
+      }
+    } else {
+      setHasOpenPunchToday(false);
+    }
+
+    setFormError(null);
+    const duration = calculateLeaveDuration(start, end);
+    setLeaveDuration(duration);
+    return true;
+  } finally {
+    setIsValidating(false);
+  }
+};
+
+
+
+  const handleDateChange = async (dates) => {
+    setSelectedDates(dates);
+    await validateDatesAgainstAttendance(dates);
+  };
+
+  // const handleDateChange = async (dates) => {
+  //   setSelectedDates(dates);
+  //   setFormError(null);
+
+  //   if (dates && dates.length === 2) {
+  //     const [start, end] = dates;
+  //     let date = start.clone();
+  //     let hasPresent = false;
+
+  //     while (date.isSameOrBefore(end, "day")) {
+  //       const isPresent = await checkIfDateIsPresent(date);
+  //       if (isPresent) {
+  //         hasPresent = true;
+  //         break;
+  //       }
+  //       date = date.add(1, "day");
+  //     }
+
+  //     if (hasPresent) {
+  //       setFormError("You cannot request leave for days marked as Present.");
+  //     } else {
+  //       const duration = calculateLeaveDuration(start, end);
+  //       setLeaveDuration(duration);
+  //     }
+  //   }
+  // };
+
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=leaveRequests&employeeId=${employeeId}`
+        `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=leaveRequests&employeeId=${employeeId}`
       );
       const data = await response.json();
       console.log("Leave request:", data);
@@ -264,8 +456,8 @@ export default function Leave({
         item.leaveType,
         item.reason,
         item.duration,
-        item.status,    
-        item.reasonForRejection, 
+        item.status,
+        item.reasonForRejection,
         fromDateStr,
         toDateStr,
       ];
@@ -391,7 +583,7 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarDays} style={{ color: "#34e134bd" }} />
       ),
       color: "#34e134",
-      backgroundColor:"#35e1342e"
+      backgroundColor: "#35e1342e",
     },
     {
       title: "Total Leave Taken",
@@ -403,7 +595,7 @@ export default function Leave({
         />
       ),
       color: "#fe0000",
-      backgroundColor:"#fe00001e"
+      backgroundColor: "#fe00001e",
     },
     {
       title: "Earned Leave Available",
@@ -412,16 +604,14 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarPlus} style={{ color: "#faad14" }} />
       ),
       color: "#faad14",
-            backgroundColor:"#faad141e"
-
+      backgroundColor: "#faad141e",
     },
     {
       title: "Personal/Sick Leave Available",
       value: leaveBalances.personalAvailable || 0,
       icon: <FontAwesomeIcon icon={faUser} style={{ color: "#0d6efdad" }} />,
       color: "#0d6efd",
-            backgroundColor:"#0d6efd26"
-
+      backgroundColor: "#0d6efd26",
     },
     {
       title: "Personal/Sick Leave Taken",
@@ -430,24 +620,21 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarMinus} style={{ color: "#b54dff" }} />
       ),
       color: "#b54dff",
-            backgroundColor:"#b54dff29"
-
+      backgroundColor: "#b54dff29",
     },
     {
       title: "Unpaid Leave Taken",
       value: leaveBalances.unpaidTaken || 0,
       icon: <FontAwesomeIcon icon={faWallet} style={{ color: "#008080b0" }} />,
       color: "#008080",
-            backgroundColor:"#00808021"
-
+      backgroundColor: "#00808021",
     },
     {
       title: "Earned Leave Taken",
       value: leaveBalances.earnedTaken || 0,
       icon: <FontAwesomeIcon icon={faCalendar} style={{ color: "#91caff" }} />,
       color: "#91caff",
-            backgroundColor:"#91caff52"
-
+      backgroundColor: "#91caff52",
     },
     {
       title: "Compoff Leave Taken",
@@ -456,8 +643,7 @@ export default function Leave({
         <FontAwesomeIcon icon={faCalendarWeek} style={{ color: "#fe00b2" }} />
       ),
       color: "#fe00b2",
-            backgroundColor:"#fe00b22b"
-
+      backgroundColor: "#fe00b22b",
     },
   ];
 
@@ -465,7 +651,7 @@ export default function Leave({
     const fetchHolidays = async () => {
       try {
         const response = await fetch(
-          `https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec?action=holidayindia&employeeId=${employeeId}`
+          `https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec?action=holidayindia&employeeId=${employeeId}`
         );
         const data = await response.json();
         // console.log("Holidays:", data);
@@ -643,7 +829,6 @@ export default function Leave({
   }, [searchText, startDateFilter, endDateFilter, filteredData]);
 
   const columns = [
-   
     {
       title: "Leave Type",
       dataIndex: "leaveType",
@@ -781,9 +966,7 @@ export default function Leave({
       dataIndex: "reasonForRejection",
       width: 300,
       ellipsis: true,
-      render: (text) => (
-        <span>{text?.trim() ? text : "-"}</span>
-      ),
+      render: (text) => <span>{text?.trim() ? text : "-"}</span>,
     },
     {
       title: "Action",
@@ -845,7 +1028,7 @@ export default function Leave({
       const encodedPayload = new URLSearchParams(payload).toString();
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbxIfZ9fotMHVfiuYPBKCIOrBhRk0A0_3MeRRGA9U965d5EB-Kfm2d8Z392otw_xSNJw/exec",
+        "https://script.google.com/macros/s/AKfycbwjSiL8nUFomLkS1Th-GtOzj9OhsbuNmSKnTs4sK0MwdbaW61vqxWGJOxkvb8wpeS8V/exec",
         {
           method: "POST",
           headers: {
@@ -859,8 +1042,12 @@ export default function Leave({
 
       if (result.success) {
         message.success("Leave request submitted successfully!");
-        setLeaveDuration(0);
+        // setLeaveDuration(0);
         form.resetFields();
+        setLeaveDuration(0);
+  setSelectedDates(null);        // ✅ Clear selected date range
+  setSelectedType(null);         // ✅ Clear leave type
+  setFormError(null);  
         await fetchLeaveBalance();
       } else {
         message.error("Failed to submit leave request!");
@@ -929,30 +1116,29 @@ export default function Leave({
                   borderBottom: "none",
                   // borderRadius: 4,
                   height: "100%",
-                
                 }}
-                  styles={{
-    body: {
-      backgroundColor: `${stat.color}33` || "white",
-      padding: "16px",
-    },
-  }}
+                styles={{
+                  body: {
+                    backgroundColor: `${stat.color}33` || "white",
+                    padding: "16px",
+                  },
+                }}
               >
-                
                 <div className="d-flex align-items-center justify-content-center flex-column">
-                   <div
-          style={{
-            minWidth: 50,
-            minHeight: 50,
-            borderRadius: "50%",
-            backgroundColor: `${stat.color}33`, // slightly darker for icon bg
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 16,
-          }}
-        >
-                  <div style={{ fontSize: 30 }}>{stat.icon}</div></div>
+                  <div
+                    style={{
+                      minWidth: 50,
+                      minHeight: 50,
+                      borderRadius: "50%",
+                      backgroundColor: `${stat.color}33`, // slightly darker for icon bg
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 16,
+                    }}
+                  >
+                    <div style={{ fontSize: 30 }}>{stat.icon}</div>
+                  </div>
                   <div>
                     <div style={{ fontSize: 16 }}>{stat.title}</div>
                     <Statistic
@@ -1005,7 +1191,25 @@ export default function Leave({
                     <Select
                       size="large"
                       placeholder="Select leave type"
-                      onChange={(value) => setSelectedType(value)} // track change
+                      // onChange={(value) => setSelectedType(value)} // track change
+                      //                      onChange={async (value) => {
+                      //   setSelectedType(value);
+                      //   if (selectedDates && selectedDates.length === 2) {
+                      //     await validateDatesAgainstAttendance(selectedDates); // 🔁 revalidate!
+                      //   }
+                      // }}
+                      onChange={async (value) => {
+                        setSelectedType(value);
+
+                        setIsValidating(true);
+                        setFormError(null);
+
+                        if (selectedDates && selectedDates.length === 2) {
+                          await validateDatesAgainstAttendance(selectedDates);
+                        } else {
+                          setIsValidating(false);
+                        }
+                      }}
                     >
                       <Option
                         value="Personal/sick leave"
@@ -1047,9 +1251,10 @@ export default function Leave({
                       showTime
                       size="large"
                       style={{ width: "100%" }}
-                      onChange={(dates) => {
-                        setSelectedDates(dates);
-                      }}
+                      // onChange={(dates) => {
+                      //   setSelectedDates(dates);
+                      // }}
+                      onChange={handleDateChange}
                     />
                   </Form.Item>
 
@@ -1091,8 +1296,8 @@ export default function Leave({
                     size="large"
                     className="mt-2"
                     onClick={handleSubmitLeave}
-                    disabled={loading || !!formError}
-                    loading={loading}
+  disabled={loading || !!formError || isValidating || hasOpenPunchToday}
+                    loading={loading || isValidating}
                   >
                     {loading
                       ? "Submitting Leave Request..."
@@ -1303,16 +1508,12 @@ export default function Leave({
             >
               <h4>Leave Request Details</h4>
               <Form layout={formLayout} form={form}>
-                <Form.Item
-                  label="Leave Type"
-                  name="leaveType"
-               
-                >
+                <Form.Item label="Leave Type" name="leaveType">
                   <Select size="large" placeholder="Select leave type">
                     <Option
                       value="Personal/sick leave"
                       disabled={leaveBalances.personalAvailable <= 0}
-                      >
+                    >
                       Personal/sick leave
                     </Option>
                     <Option
@@ -1325,37 +1526,30 @@ export default function Leave({
                     <Option value="Compoff leave">Compoff leave</Option>
                   </Select>
                 </Form.Item>
-                <Form.Item
-                  label="Date Range"
-                  name="dateRange"
-                 
-                >
+                <Form.Item label="Date Range" name="dateRange">
                   <RangePicker
                     showTime
                     size="large"
                     style={{ width: "100%" }}
-                    onChange={(dates) => {
-                      if (dates && dates.length === 2) {
-                        const [startDate, endDate] = dates;
-                        const duration = calculateLeaveDuration(
-                          startDate,
-                          endDate
-                        );
-                        setLeaveDuration(duration);
-                      } else {
-                        setLeaveDuration(null);
-                      }
-                    }}
+                    // onChange={(dates) => {
+                    //   if (dates && dates.length === 2) {
+                    //     const [startDate, endDate] = dates;
+                    //     const duration = calculateLeaveDuration(
+                    //       startDate,
+                    //       endDate
+                    //     );
+                    //     setLeaveDuration(duration);
+                    //   } else {
+                    //     setLeaveDuration(null);
+                    //   }
+                    // }}
+                    onChange={handleDateChange}
                   />
                 </Form.Item>
                 <Form.Item label="Total No. of Days">
                   <Input size="large" value={leaveDuration} />
                 </Form.Item>
-                <Form.Item
-                  label="Reason for leave"
-                  name="reason"
-             
-                >
+                <Form.Item label="Reason for leave" name="reason">
                   <TextArea
                     rows={5}
                     allowClear
@@ -1382,7 +1576,6 @@ export default function Leave({
                 <Form.Item
                   label="Reason for rejection"
                   name="reasonForRejection"
-               
                 >
                   <Input />
                 </Form.Item>
